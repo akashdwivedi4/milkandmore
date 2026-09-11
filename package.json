@@ -1,0 +1,28 @@
+{
+  "name": "milk-and-more",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Production-Ready Milk Home-Delivery Management System",
+  "scripts": {
+    "dev:backend": "node backend/node_modules/tsx/dist/cli.mjs watch backend/src/server.ts",
+    "dev:frontend": "node frontend/node_modules/vite/bin/vite.js frontend",
+    "build:backend": "node backend/node_modules/typescript/bin/tsc --project backend",
+    "build:frontend": "node frontend/node_modules/typescript/bin/tsc --project frontend && node frontend/node_modules/vite/bin/vite.js build frontend",
+    "build": "npm run build:backend && npm run build:frontend",
+    "test:frontend": "node backend/node_modules/vitest/vitest.mjs run frontend/tests",
+    "test:backend": "node backend/node_modules/vitest/vitest.mjs run --root backend",
+    "test": "npm run test:frontend && npm run test:backend",
+    "start": "node backend/dist/server.js"
+  },
+  "keywords": [
+    "milk-delivery",
+    "dairy-management",
+    "qr-code-delivery",
+    "mongodb",
+    "express",
+    "react",
+    "typescript"
+  ],
+  "author": "",
+  "license": "MIT"
+}
