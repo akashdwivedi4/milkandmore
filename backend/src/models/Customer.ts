@@ -36,8 +36,12 @@ export interface ICustomer extends Document {
   inactiveReason?: string;
   notes?: string;
   openingBalance: number;
+  openingBalanceType: 'DUE' | 'ADVANCE';
   assignedQr?: string;
   assignedQrId?: Types.ObjectId;
+  customerPortalToken?: string;
+  portalTokenCreatedAt?: Date;
+  portalTokenRevoked?: boolean;
   deliverySchedule: DeliverySchedule;
   scheduledProducts: IScheduledProduct[];
   isDeleted: boolean;
@@ -75,8 +79,12 @@ const CustomerSchema = new Schema<ICustomer>(
     inactiveReason: { type: String, trim: true },
     notes: { type: String, trim: true, default: '' },
     openingBalance: { type: Number, default: 0 },
+    openingBalanceType: { type: String, enum: ['DUE', 'ADVANCE'], default: 'DUE' },
     assignedQr: { type: String, trim: true },
     assignedQrId: { type: Schema.Types.ObjectId, ref: 'QRCode' },
+    customerPortalToken: { type: String, trim: true },
+    portalTokenCreatedAt: { type: Date },
+    portalTokenRevoked: { type: Boolean, default: false },
     deliverySchedule: {
       type: String,
       enum: ['MORNING', 'EVENING', 'BOTH'],
@@ -103,6 +111,7 @@ CustomerSchema.index({ businessId: 1, mobile: 1 });
 CustomerSchema.index({ businessId: 1, status: 1 });
 CustomerSchema.index({ businessId: 1, isDeleted: 1 });
 CustomerSchema.index({ businessId: 1, assignedQr: 1 });
+CustomerSchema.index({ customerPortalToken: 1 }, { sparse: true });
 CustomerSchema.index({ businessId: 1, locality: 1 });
 CustomerSchema.index({ businessId: 1, deliverySchedule: 1 });
 

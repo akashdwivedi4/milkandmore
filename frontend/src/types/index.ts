@@ -70,6 +70,7 @@ export interface CustomerSummary {
   mobile: string;
   address?: string | null;
   openingBalance?: number;
+  openingBalanceType?: 'DUE' | 'ADVANCE';
   previousBalance: number;
   todayDeliveriesCount: number;
   todayDeliveryAmount: number;
@@ -77,6 +78,8 @@ export interface CustomerSummary {
   totalDeliveryAmount: number;
   totalPayments: number;
   currentOutstanding: number;
+  customerCredit?: number;
+  accountStatus?: 'OUTSTANDING' | 'SETTLED' | 'CUSTOMER_CREDIT';
 }
 
 export interface Customer {
@@ -93,6 +96,9 @@ export interface Customer {
   qr_token: string;
   assigned_qr?: string;
   assignedQr?: string;
+  customerPortalToken?: string;
+  customer_portal_token?: string;
+  portalTokenRevoked?: boolean;
   active: boolean;
   status?: 'ACTIVE' | 'INACTIVE';
   deliverySchedule?: 'MORNING' | 'EVENING' | 'BOTH';
@@ -108,6 +114,9 @@ export interface Customer {
   service_end_date?: string | null;
   ending_reason?: string | null;
   opening_balance?: number;
+  opening_balance_type?: 'DUE' | 'ADVANCE';
+  customer_credit?: number;
+  account_status?: 'OUTSTANDING' | 'SETTLED' | 'CUSTOMER_CREDIT';
   notes?: string | null;
   created_at: string;
   updated_at: string;
@@ -158,10 +167,14 @@ export interface Payment {
   id: string;
   business_id: string;
   customer_id: string;
+  customer_name?: string;
   amount: number;
-  payment_method: PaymentMethod;
+  payment_method: PaymentMethod | string;
+  payment_mode?: string;
   paid_at: string;
-  payment_date: string;
+  payment_date?: string;
+  created_at?: string;
+  reference_number?: string | null;
   notes?: string | null;
   customer?: Customer;
 }
@@ -238,6 +251,29 @@ export interface Purchase {
   created_at?: string;
   product?: Product;
   supplier_rel?: Supplier;
+}
+
+export interface PurchaseReturnItem {
+  productId: string;
+  productName?: string;
+  quantity: number;
+  unit: string;
+  rate: number;
+  amount: number;
+}
+
+export interface PurchaseReturn {
+  _id?: string;
+  id?: string;
+  returnNumber: string;
+  supplierId: string;
+  supplierName?: string;
+  purchaseId?: string;
+  returnDate: string;
+  items: PurchaseReturnItem[];
+  totalAmount: number;
+  reason?: string;
+  createdAt?: string;
 }
 
 export interface DashboardMetrics {
@@ -363,6 +399,7 @@ export interface CustomerBillStatement {
   summary: {
     openingBalance?: number;
     previousBalance: number;
+    previousCredit?: number;
     todayDropsCount?: number;
     todayDeliveryAmount?: number;
     todayDrops?: {
@@ -378,10 +415,28 @@ export interface CustomerBillStatement {
     totalPaymentsCount?: number;
     periodPaymentsAmount: number;
     finalOutstanding: number;
+    customerCredit?: number;
+    creditApplied?: number;
     amountDue: number;
     netPayable?: number;
   };
+  accountStatus?: 'OUTSTANDING' | 'SETTLED' | 'CUSTOMER_CREDIT';
   generatedAt: string;
+}
+
+export interface CustomerLedgerRow {
+  id: string;
+  date: string;
+  type: 'DELIVERY' | 'PAYMENT' | 'REFUND' | 'OPENING';
+  description: string;
+  details?: string;
+  debit: number;
+  credit: number;
+  creditApplied?: number;
+  outstandingBalance: number;
+  customerCredit: number;
+  netBalance?: number;
+  paymentMethod?: string;
 }
 
 // -----------------------------------------------------------------------------

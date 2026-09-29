@@ -5,10 +5,13 @@ export type JournalSourceType =
   | 'DELIVERY'
   | 'CUSTOMER_PAYMENT'
   | 'PURCHASE'
+  | 'PURCHASE_RETURN'
   | 'SUPPLIER_PAYMENT'
   | 'EXPENSE'
   | 'OWNER_CAPITAL'
   | 'OPENING_BALANCE'
+  | 'CUSTOMER_REFUND'
+  | 'CUSTOMER_ADVANCE'
   | 'TRANSFER'
   | 'ADJUSTMENT';
 
@@ -73,10 +76,13 @@ const JournalEntrySchema = new Schema<IJournalEntry>(
         'DELIVERY',
         'CUSTOMER_PAYMENT',
         'PURCHASE',
+        'PURCHASE_RETURN',
         'SUPPLIER_PAYMENT',
         'EXPENSE',
         'OWNER_CAPITAL',
         'OPENING_BALANCE',
+        'CUSTOMER_REFUND',
+        'CUSTOMER_ADVANCE',
         'TRANSFER',
         'ADJUSTMENT',
       ],

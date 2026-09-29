@@ -41,6 +41,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   const [serviceEndDate, setServiceEndDate] = useState('');
   const [endingReason, setEndingReason] = useState('');
   const [openingBalance, setOpeningBalance] = useState<number>(0);
+  const [openingBalanceType, setOpeningBalanceType] = useState<'DUE' | 'ADVANCE'>('DUE');
   const [deliverySchedule, setDeliverySchedule] = useState<'MORNING' | 'EVENING' | 'BOTH'>('MORNING');
   const [submitting, setSubmitting] = useState(false);
 
@@ -87,6 +88,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
         service_end_date: serviceEndDate ? serviceEndDate : null,
         ending_reason: endingReason.trim() || null,
         opening_balance: openingBalance || 0,
+        opening_balance_type: openingBalanceType,
         delivery_schedule: deliverySchedule,
         assigned_qr: initialQrCode || undefined,
       });
@@ -108,6 +110,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
         setServiceEndDate('');
         setEndingReason('');
         setOpeningBalance(0);
+        setOpeningBalanceType('DUE');
       }
     } catch (err: any) {
       showToast(err.message || 'Failed to add customer', 'error');
@@ -211,6 +214,38 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
               />
             </div>
           </div>
+
+          {openingBalance > 0 && (
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 block">
+                Opening Balance Type
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setOpeningBalanceType('DUE')}
+                  className={`py-2 px-3 rounded-lg border text-xs font-bold transition-all text-center ${
+                    openingBalanceType === 'DUE'
+                      ? 'bg-rose-50 border-rose-300 text-rose-800 ring-2 ring-rose-400/30'
+                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  Outstanding Due (Receivable)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOpeningBalanceType('ADVANCE')}
+                  className={`py-2 px-3 rounded-lg border text-xs font-bold transition-all text-center ${
+                    openingBalanceType === 'ADVANCE'
+                      ? 'bg-blue-50 border-blue-300 text-blue-800 ring-2 ring-blue-400/30'
+                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  Customer Advance (Credit)
+                </button>
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="text-xs font-semibold text-slate-700 block mb-1">

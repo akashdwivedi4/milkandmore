@@ -17,6 +17,8 @@ import {
   TrendingDown,
   Scale,
   FileSpreadsheet,
+  Calculator,
+  Tag,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -33,17 +35,19 @@ export const MobileBottomNav: React.FC = () => {
   };
 
   const moreItems = [
-    { to: '/products', label: 'Products', icon: Package },
-    { to: '/inventory', label: 'Inventory', icon: Package },
-    { to: '/purchases', label: 'Purchases', icon: Truck, adminOnly: true },
-    { to: '/suppliers', label: 'Suppliers', icon: Users, adminOnly: true },
-    { to: '/expenses', label: 'Expenses', icon: TrendingDown, adminOnly: true },
-    { to: '/payments', label: 'Payments', icon: Receipt },
+    { to: '/accounts', label: 'Customer Accounts', icon: Calculator },
+    { to: '/payments', label: 'Payment Register', icon: Receipt },
     { to: '/bills', label: 'Bills & Statements', icon: FileText },
-    { to: '/financials', label: 'P&L / Balance Sheet', icon: Scale, adminOnly: true },
-    { to: '/reports', label: 'Reports', icon: BarChart3, adminOnly: true },
+    { to: '/products', label: 'Products & Pricing', icon: Package },
+    { to: '/inventory', label: 'Stock & Inventory', icon: Package },
+    { to: '/customer-rates', label: 'Special Rates', icon: Tag, adminOnly: true },
+    { to: '/purchases', label: 'Purchases & Returns', icon: Truck, adminOnly: true },
+    { to: '/suppliers', label: 'Suppliers & Vendors', icon: Users, adminOnly: true },
+    { to: '/expenses', label: 'Dairy Expenses', icon: TrendingDown, adminOnly: true },
+    { to: '/financials', label: 'Books of Accounts', icon: Scale, adminOnly: true },
+    { to: '/reports', label: 'Reports & Analytics', icon: BarChart3, adminOnly: true },
     { to: '/exports', label: 'Data Export (CSV)', icon: FileSpreadsheet, adminOnly: true },
-    { to: '/settings', label: 'Settings', icon: Settings, adminOnly: true },
+    { to: '/settings', label: 'Settings & Info', icon: Settings, adminOnly: true },
   ];
 
   return (

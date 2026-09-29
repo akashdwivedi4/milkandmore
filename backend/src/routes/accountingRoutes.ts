@@ -8,6 +8,7 @@ import {
   getCashBook,
   getBankUpiLedger,
   getDayBook,
+  getJournalEntries,
   getReceivableAgeing,
   getPayableAgeing,
   recordTransfer,
@@ -23,6 +24,7 @@ router.use(authMiddleware);
 
 router.get('/chart-of-accounts', requireAnyStaff, asyncHandler(getChartOfAccounts));
 router.get('/general-ledger', requireOwnerOrAdmin, asyncHandler(getGeneralLedger));
+router.get('/journal-entries', requireOwnerOrAdmin, asyncHandler(getJournalEntries));
 router.get('/trial-balance', requireOwnerOrAdmin, asyncHandler(getTrialBalance));
 router.get('/profit-loss', requireOwnerOrAdmin, asyncHandler(getProfitAndLoss));
 router.get('/balance-sheet', requireOwnerOrAdmin, asyncHandler(getBalanceSheet));

@@ -19,6 +19,7 @@ import {
   UserX,
   ArrowUpDown,
   X,
+  Calculator,
 } from 'lucide-react';
 import { AddCustomerModal } from '../components/AddCustomerModal';
 import { EditCustomerModal } from '../components/EditCustomerModal';
@@ -40,8 +41,11 @@ export const Customers: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState(initialSearch);
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
+  const [selectedLetter, setSelectedLetter] = useState<string>('ALL');
   const [sortBy, setSortBy] = useState<'name' | 'customerSince'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  const alphabets = ['ALL', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')];
 
   // Modals state
   const [isAddOpen, setIsAddOpen] = useState(initialAction === 'add');
@@ -140,22 +144,29 @@ export const Customers: React.FC = () => {
     }
   };
 
+  const displayedCustomers = customers.filter((c) => {
+    if (selectedLetter !== 'ALL') {
+      return (c.name || '').trim().toUpperCase().startsWith(selectedLetter);
+    }
+    return true;
+  });
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-            Customer Directory
+            Customer Master & Ledger Directory
           </h2>
           <p className="text-xs text-slate-500">
-            Manage subscribers, service lifecycle dates, and unique QR tokens
+            Subscriber accounts, A–Z customer lookup, lifecycle dates, and QR door cards
           </p>
         </div>
 
         <button
           onClick={() => setIsAddOpen(true)}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-sky-600 hover:bg-sky-700 active:bg-sky-800 text-white font-bold text-xs rounded-xl shadow-md shadow-sky-500/25 transition-all"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#2E7D32] hover:bg-[#256629] active:bg-[#1e5421] text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-700/20 transition-all"
         >
           <UserPlus className="w-4 h-4" />
           Add Customer
@@ -163,7 +174,7 @@ export const Customers: React.FC = () => {
       </div>
 
       {/* Filter and Tabs Card */}
-      <div className="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+      <div className="bg-white p-3 sm:p-4 rounded-xl border border-slate-200 shadow-xs space-y-3">
         {/* Search and Sort Row */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="sm:col-span-2 relative">
@@ -173,7 +184,7 @@ export const Customers: React.FC = () => {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by customer name, mobile, address, or QR..."
-              className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-sky-500 focus:outline-none"
+              className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-[#2E7D32] focus:outline-none"
             />
           </div>
 
@@ -186,7 +197,7 @@ export const Customers: React.FC = () => {
                 setSortBy(sb);
                 setSortOrder(so);
               }}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 font-semibold focus:ring-2 focus:ring-sky-500 focus:outline-none"
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 font-semibold focus:ring-2 focus:ring-[#2E7D32] focus:outline-none"
             >
               <option value="name-asc">Name (A → Z)</option>
               <option value="name-desc">Name (Z → A)</option>
@@ -198,10 +209,10 @@ export const Customers: React.FC = () => {
 
         {/* Filter Tabs: ALL / ACTIVE / INACTIVE */}
         <div className="flex items-center justify-between gap-2 flex-wrap pt-1">
-          <div className="flex items-center gap-1.5 p-1 bg-slate-100/80 rounded-xl w-fit">
+          <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-lg w-fit">
             <button
               onClick={() => setStatusFilter('ALL')}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+              className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${
                 statusFilter === 'ALL'
                   ? 'bg-white text-slate-900 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -211,9 +222,9 @@ export const Customers: React.FC = () => {
             </button>
             <button
               onClick={() => setStatusFilter('ACTIVE')}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+              className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${
                 statusFilter === 'ACTIVE'
-                  ? 'bg-emerald-600 text-white shadow-xs'
+                  ? 'bg-[#2E7D32] text-white shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -221,7 +232,7 @@ export const Customers: React.FC = () => {
             </button>
             <button
               onClick={() => setStatusFilter('INACTIVE')}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+              className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${
                 statusFilter === 'INACTIVE'
                   ? 'bg-slate-700 text-white shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -231,169 +242,320 @@ export const Customers: React.FC = () => {
             </button>
           </div>
 
-          <span className="text-xs text-slate-400 font-medium">
-            Total: <strong className="text-slate-700 font-bold">{customers.length}</strong>
+          <span className="text-xs text-slate-500 font-medium">
+            Showing: <strong className="text-slate-800 font-bold">{displayedCustomers.length}</strong> of {customers.length}
           </span>
+        </div>
+
+        {/* iRujul A-Z Quick Alphabet Filter Bar */}
+        <div className="pt-2 border-t border-slate-100 flex items-center gap-1 overflow-x-auto pb-1 select-none scrollbar-thin">
+          <span className="text-[10px] uppercase font-bold text-slate-400 mr-1 shrink-0">A-Z:</span>
+          {alphabets.map((letter) => {
+            const isSelected = selectedLetter === letter;
+            return (
+              <button
+                key={letter}
+                onClick={() => setSelectedLetter(letter)}
+                className={`min-w-[24px] h-6 px-1.5 flex items-center justify-center text-[11px] font-bold rounded transition-colors shrink-0 ${
+                  isSelected
+                    ? 'bg-[#6B1724] text-white shadow-xs'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                }`}
+              >
+                {letter}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Customers List */}
+      {/* Customers List & Table */}
       <div className="space-y-2.5">
         {loading ? (
           <div className="py-12 text-center text-slate-400">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2 text-sky-500" />
+            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2 text-[#2E7D32]" />
             <p className="text-xs font-semibold">Loading customers...</p>
           </div>
-        ) : customers.length === 0 ? (
-          <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
+        ) : displayedCustomers.length === 0 ? (
+          <div className="p-12 text-center bg-white rounded-xl border border-slate-200">
             <Users className="w-10 h-10 mx-auto mb-2 text-slate-300" />
             <p className="text-sm font-bold text-slate-700">No customers found</p>
             <p className="text-xs text-slate-400 mt-0.5">
-              {statusFilter === 'ALL'
+              {selectedLetter !== 'ALL'
+                ? `No customers found starting with '${selectedLetter}'.`
+                : statusFilter === 'ALL'
                 ? 'Add your first customer to start deliveries.'
                 : `No customers matching '${statusFilter}' status.`}
             </p>
-            {statusFilter === 'ALL' && (
+            {selectedLetter === 'ALL' && statusFilter === 'ALL' && (
               <button
                 onClick={() => setIsAddOpen(true)}
-                className="mt-4 px-4 py-2 bg-sky-600 text-white text-xs font-bold rounded-xl"
+                className="mt-4 px-4 py-2 bg-[#2E7D32] text-white text-xs font-bold rounded-xl"
               >
                 Add First Customer
               </button>
             )}
           </div>
         ) : (
-          customers.map((customer) => (
-            <div
-              key={customer.id}
-              className="bg-white hover:bg-slate-50/80 rounded-2xl p-4 border border-slate-200 transition-all shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-            >
-              {/* Customer Info Clickable */}
-              <div
-                onClick={() => navigate(`/customers/${customer.id}`)}
-                className="flex items-start gap-3 flex-1 cursor-pointer"
-              >
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-600 to-sky-400 text-white flex items-center justify-center font-bold text-sm shadow-xs shrink-0 mt-0.5">
-                  {customer.name[0]}
-                </div>
-
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-bold text-slate-900 text-sm hover:text-sky-600 transition-colors">
-                      {customer.name}
-                    </h3>
-                    {customer.active ? (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Active
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-300 inline-flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Inactive
-                      </span>
-                    )}
-                    {(customer.assigned_qr || customer.assignedQr || customer.qr_token) && (
-                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-sky-50 text-sky-700 border border-sky-200">
-                        QR: {customer.assigned_qr || customer.assignedQr || customer.qr_token}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
-                    <span className="flex items-center gap-1 text-slate-700 font-medium">
-                      <Phone className="w-3 h-3 text-slate-400" />
-                      {customer.mobile}
-                    </span>
-                    {customer.address && (
-                      <span className="flex items-center gap-1">
-                        <MapPin className="w-3 h-3 text-slate-400" />
-                        {customer.address}
-                      </span>
-                    )}
-                    <span className="flex items-center gap-1 text-sky-700 font-medium">
-                      <Calendar className="w-3 h-3 text-sky-500" />
-                      Since: {customer.customer_since ? formatDate(customer.customer_since) : '—'}
-                    </span>
-                    {customer.service_end_date && (
-                      <span className="flex items-center gap-1 text-amber-700 font-medium">
-                        <Calendar className="w-3 h-3 text-amber-500" />
-                        Ended: {formatDate(customer.service_end_date)}
-                      </span>
-                    )}
-                  </div>
-
-                  {customer.ending_reason && (
-                    <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded inline-block">
-                      Reason: {customer.ending_reason}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center gap-1.5 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 justify-end shrink-0 flex-wrap">
-                {/* QR Card */}
-                <button
-                  onClick={() => setQrCustomer(customer)}
-                  className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors"
-                  title="Print / View QR Door Card"
-                >
-                  <QrCode className="w-3.5 h-3.5 text-sky-600" />
-                  QR Card
-                </button>
-
-                {/* Edit */}
-                <button
-                  onClick={() => setEditingCustomer(customer)}
-                  className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
-                  title="Edit Customer"
-                >
-                  <Edit2 className="w-3.5 h-3.5" />
-                </button>
-
-                {/* Deactivate / Reactivate */}
-                {customer.active ? (
-                  <button
-                    onClick={() => {
-                      setDeactivateCustomer(customer);
-                      setDeactivateReason('');
-                    }}
-                    className="p-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition-colors"
-                    title="Deactivate Customer"
-                  >
-                    <UserX className="w-3.5 h-3.5" />
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => handleReactivate(customer)}
-                    className="p-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition-colors"
-                    title="Reactivate Customer"
-                  >
-                    <UserCheck className="w-3.5 h-3.5" />
-                  </button>
-                )}
-
-                {/* Delete (Owner/Admin only) */}
-                {isOwnerOrAdmin && (
-                  <button
-                    onClick={() => setDeleteCustomer(customer)}
-                    className="p-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition-colors"
-                    title="Delete Customer"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                )}
-
-                {/* View Details */}
-                <button
-                  onClick={() => navigate(`/customers/${customer.id}`)}
-                  className="p-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 transition-colors"
-                  title="View Profile"
-                >
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
+          <>
+            {/* Desktop Dense iRujul Master Table */}
+            <div className="hidden md:block bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-100 text-slate-700 border-b border-slate-200 font-bold text-[11px] uppercase tracking-wider">
+                    <th className="py-2.5 px-3 w-12 text-center">#</th>
+                    <th className="py-2.5 px-3">Customer Name</th>
+                    <th className="py-2.5 px-3">Mobile</th>
+                    <th className="py-2.5 px-3">Delivery Address</th>
+                    <th className="py-2.5 px-3 text-center">Status</th>
+                    <th className="py-2.5 px-3 text-center">QR Token</th>
+                    <th className="py-2.5 px-3">Dates</th>
+                    <th className="py-2.5 px-3 text-center">Account</th>
+                    <th className="py-2.5 px-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium">
+                  {displayedCustomers.map((customer, idx) => (
+                    <tr
+                      key={customer.id}
+                      className="hover:bg-amber-50/40 transition-colors"
+                    >
+                      <td className="py-2 px-3 text-center text-slate-400 font-mono text-[11px]">
+                        {idx + 1}
+                      </td>
+                      <td className="py-2 px-3">
+                        <div
+                          onClick={() => navigate(`/customers/${customer.id}`)}
+                          className="font-bold text-slate-900 hover:text-sky-700 cursor-pointer flex items-center gap-2"
+                        >
+                          <div className="w-6 h-6 rounded bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center font-bold text-[11px] shrink-0">
+                            {customer.name[0]}
+                          </div>
+                          <span>{customer.name}</span>
+                        </div>
+                      </td>
+                      <td className="py-2 px-3 text-slate-700 font-mono text-[11px]">
+                        {customer.mobile}
+                      </td>
+                      <td className="py-2 px-3 text-slate-600 max-w-xs truncate" title={customer.address || '—'}>
+                        {customer.address || '—'}
+                      </td>
+                      <td className="py-2 px-3 text-center">
+                        {customer.active ? (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Active
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-300 inline-flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Inactive
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2 px-3 text-center">
+                        {(customer.assigned_qr || customer.assignedQr || customer.qr_token) ? (
+                          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200">
+                            {customer.assigned_qr || customer.assignedQr || customer.qr_token}
+                          </span>
+                        ) : (
+                          <span className="text-slate-300">—</span>
+                        )}
+                      </td>
+                      <td className="py-2 px-3 text-[11px] text-slate-500">
+                        {customer.service_end_date ? (
+                          <span className="text-amber-700 font-semibold" title={`Reason: ${customer.ending_reason || 'N/A'}`}>
+                            Ended: {formatDate(customer.service_end_date)}
+                          </span>
+                        ) : (
+                          <span>Since: {customer.customer_since ? formatDate(customer.customer_since) : '—'}</span>
+                        )}
+                      </td>
+                      <td className="py-2 px-3 text-center">
+                        <button
+                          onClick={() => navigate(`/accounts?customerId=${customer.id}`)}
+                          className="px-2.5 py-1 rounded-md bg-[#6B1724] hover:bg-[#52121b] text-white text-[11px] font-bold inline-flex items-center gap-1.5 shadow-xs transition-colors"
+                          title="Open Customer Account & Ledger"
+                        >
+                          <Calculator className="w-3 h-3 text-amber-300" />
+                          <span>Account</span>
+                        </button>
+                      </td>
+                      <td className="py-2 px-3 text-right">
+                        <div className="inline-flex items-center gap-1">
+                          <button
+                            onClick={() => setQrCustomer(customer)}
+                            className="p-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+                            title="Print / View QR Door Card"
+                          >
+                            <QrCode className="w-3.5 h-3.5 text-sky-600" />
+                          </button>
+                          <button
+                            onClick={() => setEditingCustomer(customer)}
+                            className="p-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
+                            title="Edit Customer"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          {customer.active ? (
+                            <button
+                              onClick={() => {
+                                setDeactivateCustomer(customer);
+                                setDeactivateReason('');
+                              }}
+                              className="p-1 rounded bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition-colors"
+                              title="Deactivate Customer"
+                            >
+                              <UserX className="w-3.5 h-3.5" />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleReactivate(customer)}
+                              className="p-1 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition-colors"
+                              title="Reactivate Customer"
+                            >
+                              <UserCheck className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          {isOwnerOrAdmin && (
+                            <button
+                              onClick={() => setDeleteCustomer(customer)}
+                              className="p-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition-colors"
+                              title="Delete Customer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => navigate(`/customers/${customer.id}`)}
+                            className="p-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
+                            title="View Customer Profile"
+                          >
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          ))
+
+            {/* Mobile Cards (Screen < md) */}
+            <div className="md:hidden space-y-2.5">
+              {displayedCustomers.map((customer) => (
+                <div
+                  key={customer.id}
+                  className="bg-white rounded-xl p-3.5 border border-slate-200 shadow-xs space-y-2.5"
+                >
+                  <div
+                    onClick={() => navigate(`/customers/${customer.id}`)}
+                    className="flex items-start gap-3 cursor-pointer"
+                  >
+                    <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-sky-600 to-sky-400 text-white flex items-center justify-center font-bold text-sm shadow-xs shrink-0 mt-0.5">
+                      {customer.name[0]}
+                    </div>
+
+                    <div className="space-y-1 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-bold text-slate-900 text-sm">
+                          {customer.name}
+                        </h3>
+                        {customer.active ? (
+                          <span className="text-[10px] font-bold px-2 py-0.2 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            Active
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold px-2 py-0.2 rounded-full bg-slate-100 text-slate-700 border border-slate-300">
+                            Inactive
+                          </span>
+                        )}
+                        {(customer.assigned_qr || customer.assignedQr || customer.qr_token) && (
+                          <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-sky-50 text-sky-700 border border-sky-200">
+                            QR: {customer.assigned_qr || customer.assignedQr || customer.qr_token}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-slate-500">
+                        <span className="flex items-center gap-1 text-slate-700 font-medium">
+                          <Phone className="w-3 h-3 text-slate-400" />
+                          {customer.mobile}
+                        </span>
+                        {customer.address && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-3 h-3 text-slate-400" />
+                            {customer.address}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions & Account */}
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 flex-wrap gap-2">
+                    <button
+                      onClick={() => navigate(`/accounts?customerId=${customer.id}`)}
+                      className="px-2.5 py-1 rounded bg-[#6B1724] text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-xs"
+                    >
+                      <Calculator className="w-3.5 h-3.5 text-amber-300" />
+                      <span>Account</span>
+                    </button>
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setQrCustomer(customer)}
+                        className="p-1.5 rounded-lg bg-slate-100 text-slate-700"
+                        title="QR Door Card"
+                      >
+                        <QrCode className="w-3.5 h-3.5 text-sky-600" />
+                      </button>
+                      <button
+                        onClick={() => setEditingCustomer(customer)}
+                        className="p-1.5 rounded-lg bg-slate-100 text-slate-600"
+                        title="Edit Customer"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      {customer.active ? (
+                        <button
+                          onClick={() => {
+                            setDeactivateCustomer(customer);
+                            setDeactivateReason('');
+                          }}
+                          className="p-1.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200"
+                          title="Deactivate Customer"
+                        >
+                          <UserX className="w-3.5 h-3.5" />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleReactivate(customer)}
+                          className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200"
+                          title="Reactivate Customer"
+                        >
+                          <UserCheck className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {isOwnerOrAdmin && (
+                        <button
+                          onClick={() => setDeleteCustomer(customer)}
+                          className="p-1.5 rounded-lg bg-rose-50 text-rose-600 border border-rose-200"
+                          title="Delete Customer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => navigate(`/customers/${customer.id}`)}
+                        className="p-1.5 rounded-lg bg-slate-100 text-slate-600"
+                      >
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 

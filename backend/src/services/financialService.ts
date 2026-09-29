@@ -80,20 +80,28 @@ export const getCustomerLedger = async (
   const deliveries = await Delivery.find(deliveryFilter).sort({ deliveryDate: 1, createdAt: 1 });
   const payments = await CustomerPayment.find(paymentFilter).sort({ paymentDate: 1, createdAt: 1 });
 
-  // Compute all-time totals for accurate outstanding balance
-  const allDeliveries = await Delivery.find({ businessId: bizId, customerId: custId });
+  // Compute all-time totals for accurate outstanding balance and customer credit
+  const allDeliveries = await Delivery.find({ businessId: bizId, customerId: custId, status: 'DELIVERED' });
   const allPayments = await CustomerPayment.find({ businessId: bizId, customerId: custId });
 
   const totalDeliveryCharges = roundMoney(
     allDeliveries.reduce((sum, d) => sum + (d.totalAmount || 0), 0)
   );
   const totalCustomerPayments = roundMoney(
-    allPayments.reduce((sum, p) => sum + (p.amount || 0), 0)
+    allPayments.reduce((sum, p) => sum + (p.paymentType === 'REFUND' ? -(p.amount || 0) : (p.amount || 0)), 0)
   );
 
-  const currentOutstanding = roundMoney(
-    customer.openingBalance + totalDeliveryCharges - totalCustomerPayments
-  );
+  const isOpeningAdvance = customer.openingBalanceType === 'ADVANCE';
+  const openingNet = isOpeningAdvance
+    ? -roundMoney(customer.openingBalance || 0)
+    : roundMoney(customer.openingBalance || 0);
+
+  const netBalance = roundMoney(openingNet + totalDeliveryCharges - totalCustomerPayments);
+
+  const currentOutstanding = Math.max(0, netBalance);
+  const customerCredit = Math.max(0, -netBalance);
+  const accountStatus =
+    netBalance > 0 ? 'OUTSTANDING' : netBalance < 0 ? 'CUSTOMER_CREDIT' : 'SETTLED';
 
   // Build combined chronological statement
   const entries: any[] = [];
@@ -102,6 +110,9 @@ export const getCustomerLedger = async (
     entries.push({
       date: d.deliveryDate,
       type: 'DELIVERY',
+      shift: d.shift,
+      items: d.items,
+      isAdditional: Boolean(d.isAdditional),
       description: `${d.shift} delivery: ${d.items.map((i) => `${i.productName} (${i.quantity} ${i.unit})`).join(', ')}`,
       debit: d.totalAmount,
       credit: 0,
@@ -111,12 +122,18 @@ export const getCustomerLedger = async (
   }
 
   for (const p of payments) {
+    const isRefund = p.paymentType === 'REFUND';
     entries.push({
       date: p.paymentDate,
-      type: 'PAYMENT',
-      description: `Payment received (${p.paymentMode}${p.referenceNumber ? ` ref: ${p.referenceNumber}` : ''})`,
-      debit: 0,
-      credit: p.amount,
+      type: isRefund ? 'REFUND' : 'PAYMENT',
+      paymentMode: p.paymentMode || 'CASH',
+      referenceNumber: p.referenceNumber || null,
+      notes: p.notes || null,
+      description: isRefund
+        ? `Customer credit refund (${p.paymentMode || 'CASH'}${p.referenceNumber ? ` ref: ${p.referenceNumber}` : ''})`
+        : `Payment received (${p.paymentMode || 'CASH'}${p.referenceNumber ? ` ref: ${p.referenceNumber}` : ''})`,
+      debit: isRefund ? p.amount : 0,
+      credit: isRefund ? 0 : p.amount,
       createdAt: p.createdAt,
       refId: p._id.toString(),
     });
@@ -127,11 +144,23 @@ export const getCustomerLedger = async (
     return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
   });
 
-  // Calculate running balances
-  let runningBalance = customer.openingBalance;
+  // Calculate chronological running net balance, credit applied, and separate outstanding vs credit
+  let runningNet = openingNet;
   for (const entry of entries) {
-    runningBalance = roundMoney(runningBalance + entry.debit - entry.credit);
-    entry.balance = runningBalance;
+    const priorCredit = Math.max(0, -runningNet);
+    runningNet = roundMoney(runningNet + entry.debit - entry.credit);
+
+    if (entry.type === 'DELIVERY') {
+      entry.creditApplied = roundMoney(Math.min(entry.debit, priorCredit));
+    } else {
+      entry.creditApplied = 0;
+    }
+
+    entry.runningNet = runningNet;
+    entry.outstandingBalance = Math.max(0, runningNet);
+    entry.customerCredit = Math.max(0, -runningNet);
+    // balance is always non-negative for display
+    entry.balance = Math.max(0, runningNet);
   }
 
   return {
@@ -141,12 +170,19 @@ export const getCustomerLedger = async (
       mobile: customer.mobile,
       address: customer.address,
       openingBalance: customer.openingBalance,
+      openingBalanceType: customer.openingBalanceType || 'DUE',
       customerSince: customer.customerSince,
     },
     openingBalance: customer.openingBalance,
+    openingBalanceType: customer.openingBalanceType || 'DUE',
+    openingAdvance: isOpeningAdvance ? customer.openingBalance : 0,
+    openingDue: !isOpeningAdvance ? customer.openingBalance : 0,
     totalDeliveryCharges,
     totalCustomerPayments,
+    netBalance,
     currentOutstanding,
+    customerCredit,
+    accountStatus,
     entries,
   };
 };

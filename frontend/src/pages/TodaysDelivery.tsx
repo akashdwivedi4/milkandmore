@@ -30,6 +30,7 @@ import {
   VolumeX,
   Compass,
   Sparkles,
+  Calculator,
 } from 'lucide-react';
 import { DeliveryModal } from '../components/DeliveryModal';
 import { useToast } from '../contexts/ToastContext';
@@ -495,15 +496,15 @@ export const TodaysDelivery: React.FC = () => {
         </div>
       </div>
 
-      {/* Customer Delivery List */}
+      {/* Customer Delivery List & Table */}
       <div className="space-y-2.5">
         {loading ? (
           <div className="py-12 text-center text-slate-400">
-            <Clock className="w-8 h-8 animate-spin mx-auto mb-2 text-brand-500" />
+            <Clock className="w-8 h-8 animate-spin mx-auto mb-2 text-[#2E7D32]" />
             <p className="text-xs font-semibold">Loading delivery route...</p>
           </div>
         ) : filteredCustomers.length === 0 ? (
-          <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
+          <div className="p-12 text-center bg-white rounded-xl border border-slate-200">
             <CheckCircle2 className="w-10 h-10 mx-auto mb-2 text-slate-300" />
             <p className="text-sm font-bold text-slate-700">No scheduled customers found</p>
             <p className="text-xs text-slate-400 mt-0.5">
@@ -511,95 +512,206 @@ export const TodaysDelivery: React.FC = () => {
             </p>
           </div>
         ) : (
-          filteredCustomers.map((customer) => {
-            const deliveries = deliveriesByCustomer.get(customer.id) || [];
-            const isDelivered = deliveries.some(
-              (d: any) => d.shift === selectedShift || d.status === 'DELIVERED'
-            );
-            const latestDelivery = isDelivered ? deliveries[0] : null;
+          <>
+            {/* Desktop Dense Delivery Table */}
+            <div className="hidden md:block bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-100 text-slate-700 border-b border-slate-200 font-bold text-[11px] uppercase tracking-wider">
+                    <th className="py-2.5 px-3 w-12 text-center">#</th>
+                    <th className="py-2.5 px-3">Customer Name</th>
+                    <th className="py-2.5 px-3">Contact & Address</th>
+                    <th className="py-2.5 px-3 text-center">Status</th>
+                    <th className="py-2.5 px-3">Drop Details</th>
+                    <th className="py-2.5 px-3 text-center">Account</th>
+                    <th className="py-2.5 px-3 text-right">Delivery Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium">
+                  {filteredCustomers.map((customer, idx) => {
+                    const deliveries = deliveriesByCustomer.get(customer.id) || [];
+                    const isDelivered = deliveries.some(
+                      (d: any) => d.shift === selectedShift || d.status === 'DELIVERED'
+                    );
+                    const latestDelivery = isDelivered ? deliveries[0] : null;
 
-            return (
-              <div
-                key={customer.id}
-                className={`bg-white rounded-2xl p-4 border transition-all shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                  isDelivered ? 'border-emerald-200/80 bg-emerald-50/20' : 'border-slate-200'
-                }`}
-              >
-                {/* Customer Details */}
-                <div
-                  className="flex items-start gap-3 cursor-pointer flex-1"
-                  onClick={() => navigate(`/customers/${customer.id}`)}
-                >
+                    return (
+                      <tr
+                        key={customer.id}
+                        className={`transition-colors ${
+                          isDelivered ? 'bg-emerald-50/20 hover:bg-emerald-50/40' : 'hover:bg-amber-50/40'
+                        }`}
+                      >
+                        <td className="py-2 px-3 text-center text-slate-400 font-mono text-[11px]">
+                          {idx + 1}
+                        </td>
+                        <td className="py-2 px-3">
+                          <div
+                            onClick={() => navigate(`/customers/${customer.id}`)}
+                            className="font-bold text-slate-900 hover:text-sky-700 cursor-pointer flex items-center gap-2"
+                          >
+                            <div
+                              className={`w-6 h-6 rounded flex items-center justify-center font-bold text-[11px] shrink-0 ${
+                                isDelivered ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                              }`}
+                            >
+                              {isDelivered ? <CheckCircle2 className="w-3.5 h-3.5" /> : customer.name[0]}
+                            </div>
+                            <span>{customer.name}</span>
+                          </div>
+                        </td>
+                        <td className="py-2 px-3">
+                          <div className="text-slate-700 font-mono text-[11px]">{customer.mobile}</div>
+                          <div className="text-slate-500 text-[11px] truncate max-w-xs" title={customer.address || ''}>
+                            {customer.address || customer.locality || '—'}
+                          </div>
+                        </td>
+                        <td className="py-2 px-3 text-center">
+                          {isDelivered ? (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Delivered ({deliveries.length}x)
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Pending
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2 px-3 text-[11px]">
+                          {latestDelivery ? (
+                            <span className="text-emerald-700 font-semibold">
+                              {formatTime(latestDelivery.delivered_at)} • {formatCurrency(latestDelivery.total_amount)}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400">Not recorded yet</span>
+                          )}
+                        </td>
+                        <td className="py-2 px-3 text-center">
+                          <button
+                            onClick={() => navigate(`/accounts?customerId=${customer.id}`)}
+                            className="px-2 py-1 rounded bg-[#6B1724] hover:bg-[#52121b] text-white text-[10px] font-bold inline-flex items-center gap-1 shadow-xs transition-colors"
+                            title="Open Customer Account"
+                          >
+                            <Calculator className="w-3 h-3 text-amber-300" />
+                            <span>Account</span>
+                          </button>
+                        </td>
+                        <td className="py-2 px-3 text-right">
+                          <div className="inline-flex items-center gap-1.5">
+                            <button
+                              onClick={() => setSelectedCustomer(customer)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#2E7D32] hover:bg-[#256629] text-white font-bold text-xs rounded-lg shadow-xs transition-colors"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>{isDelivered ? 'Add Another' : 'Add Delivery'}</span>
+                            </button>
+                            <button
+                              onClick={() => navigate(`/customers/${customer.id}`)}
+                              className="p-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
+                              title="Customer Details"
+                            >
+                              <ChevronRight className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Cards (Screen < md) */}
+            <div className="md:hidden space-y-2.5">
+              {filteredCustomers.map((customer) => {
+                const deliveries = deliveriesByCustomer.get(customer.id) || [];
+                const isDelivered = deliveries.some(
+                  (d: any) => d.shift === selectedShift || d.status === 'DELIVERED'
+                );
+                const latestDelivery = isDelivered ? deliveries[0] : null;
+
+                return (
                   <div
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 mt-0.5 ${
-                      isDelivered
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : 'bg-amber-100 text-amber-800'
+                    key={customer.id}
+                    className={`bg-white rounded-xl p-3.5 border transition-all shadow-xs space-y-2.5 ${
+                      isDelivered ? 'border-emerald-200/80 bg-emerald-50/20' : 'border-slate-200'
                     }`}
                   >
-                    {isDelivered ? <CheckCircle2 className="w-5 h-5" /> : customer.name[0]}
-                  </div>
+                    {/* Customer Details */}
+                    <div
+                      className="flex items-start gap-3 cursor-pointer"
+                      onClick={() => navigate(`/customers/${customer.id}`)}
+                    >
+                      <div
+                        className={`w-9 h-9 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 mt-0.5 ${
+                          isDelivered
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : 'bg-amber-100 text-amber-800'
+                        }`}
+                      >
+                        {isDelivered ? <CheckCircle2 className="w-4 h-4" /> : customer.name[0]}
+                      </div>
 
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-slate-900 text-sm">{customer.name}</h3>
-                      {isDelivered ? (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                          Delivered ({deliveries.length}x)
-                        </span>
-                      ) : (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
-                          Pending
-                        </span>
-                      )}
+                      <div className="space-y-0.5 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-bold text-slate-900 text-sm">{customer.name}</h3>
+                          {isDelivered ? (
+                            <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800">
+                              Delivered ({deliveries.length}x)
+                            </span>
+                          ) : (
+                            <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-800">
+                              Pending
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-x-2 text-xs text-slate-500">
+                          <span className="font-medium text-slate-700">{customer.mobile}</span>
+                          {customer.address && <span>• {customer.address}</span>}
+                        </div>
+
+                        {latestDelivery && (
+                          <p className="text-[11px] text-emerald-700 font-medium">
+                            Last drop: {formatTime(latestDelivery.delivered_at)} ({formatCurrency(latestDelivery.total_amount)})
+                          </p>
+                        )}
+                      </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
-                      <span className="flex items-center gap-1 font-medium text-slate-700">
-                        <Phone className="w-3 h-3 text-slate-400" />
-                        {customer.mobile}
-                      </span>
-                      {customer.address && (
-                        <span className="flex items-center gap-1">
-                          <MapPin className="w-3 h-3 text-slate-400" />
-                          {customer.address}
-                        </span>
-                      )}
-                      {customer.locality && (
-                        <span className="text-slate-400">• {customer.locality}</span>
-                      )}
+                    {/* Actions */}
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-100 flex-wrap gap-2">
+                      <button
+                        onClick={() => navigate(`/accounts?customerId=${customer.id}`)}
+                        className="px-2 py-1 rounded bg-[#6B1724] text-white text-xs font-bold inline-flex items-center gap-1 shadow-xs"
+                      >
+                        <Calculator className="w-3.5 h-3.5 text-amber-300" />
+                        <span>Account</span>
+                      </button>
+
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => setSelectedCustomer(customer)}
+                          className="inline-flex items-center justify-center gap-1 px-3 py-1.5 bg-[#2E7D32] hover:bg-[#256629] text-white font-bold text-xs rounded-lg shadow-xs transition-colors"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>{isDelivered ? 'Add Another' : 'Add Delivery'}</span>
+                        </button>
+
+                        <button
+                          onClick={() => navigate(`/customers/${customer.id}`)}
+                          className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
+                          title="Open Customer Profile"
+                        >
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
-
-                    {latestDelivery && (
-                      <p className="text-[11px] text-emerald-700 font-medium">
-                        Last delivered at {formatTime(latestDelivery.delivered_at)} (
-                        {formatCurrency(latestDelivery.total_amount)})
-                      </p>
-                    )}
                   </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 justify-end shrink-0">
-                  <button
-                    onClick={() => setSelectedCustomer(customer)}
-                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white font-bold text-xs rounded-xl shadow-xs transition-colors"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    {isDelivered ? 'Add Another' : 'Add Delivery'}
-                  </button>
-
-                  <button
-                    onClick={() => navigate(`/customers/${customer.id}`)}
-                    className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
-                    title="Open Customer Profile"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            );
-          })
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
 

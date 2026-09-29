@@ -29,6 +29,7 @@ export const CHART_OF_ACCOUNTS = {
 
   // LIABILITIES (2000 - 2999)
   SUPPLIER_PAYABLES: { code: '2100', name: 'Supplier Payables', type: 'LIABILITY' as const },
+  CUSTOMER_ADVANCES: { code: '2150', name: 'Customer Advances & Credits', type: 'LIABILITY' as const },
   LOANS: { code: '2200', name: 'Loans & Borrowings', type: 'LIABILITY' as const },
   OTHER_LIABILITIES: { code: '2300', name: 'Other Current Liabilities', type: 'LIABILITY' as const },
 
@@ -48,6 +49,7 @@ export const CHART_OF_ACCOUNTS = {
   MILK_COGS: { code: '5010', name: 'Cost of Goods Sold - Milk', type: 'EXPENSE' as const },
   DAIRY_PRODUCTS_COGS: { code: '5020', name: 'Cost of Goods Sold - Products', type: 'EXPENSE' as const },
   OTHER_COGS: { code: '5030', name: 'Direct Production Costs', type: 'EXPENSE' as const },
+  PURCHASE_RETURNS: { code: '5090', name: 'Purchase Returns & Allowances', type: 'EXPENSE' as const },
 
   // EXPENSES (6000 - 6999)
   EXPENSE_SALARY: { code: '6010', name: 'Staff Salary & Wages', type: 'EXPENSE' as const },
@@ -630,6 +632,28 @@ export const getDayBook = async (
     totalEntries: entries.length,
     entries,
   };
+};
+
+export const getJournalEntries = async (
+  businessId: string | Types.ObjectId,
+  filters: { startDate?: string; endDate?: string; sourceType?: string; limit?: number } = {}
+) => {
+  const bizId = new Types.ObjectId(businessId);
+  const query: any = { businessId: bizId };
+
+  if (filters.startDate || filters.endDate) {
+    query.date = {};
+    if (filters.startDate) query.date.$gte = filters.startDate;
+    if (filters.endDate) query.date.$lte = filters.endDate;
+  }
+
+  if (filters.sourceType) {
+    query.sourceType = filters.sourceType;
+  }
+
+  const limit = Math.min(filters.limit || 100, 500);
+  const entries = await JournalEntry.find(query).sort({ date: -1, createdAt: -1 }).limit(limit);
+  return entries;
 };
 
 // -----------------------------------------------------------------------------

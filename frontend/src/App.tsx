@@ -28,6 +28,9 @@ import { Settings } from './pages/Settings';
 import { Login } from './pages/Login';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { ResetPassword } from './pages/ResetPassword';
+import { CustomerPortal } from './pages/CustomerPortal';
+import { CustomerAccounts } from './pages/CustomerAccounts';
+import { CustomerHisaab } from './pages/CustomerHisaab';
 
 export const App: React.FC = () => {
   return (
@@ -35,10 +38,11 @@ export const App: React.FC = () => {
       <AuthProvider>
         <ToastProvider>
           <Routes>
-            {/* Public Auth Routes */}
+            {/* Public Auth Routes & Customer Portal */}
             <Route path="/login" element={<Login />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/customer/portal/:token" element={<CustomerPortal />} />
 
             {/* Authenticated Application Shell with Route Protection */}
             <Route
@@ -55,6 +59,8 @@ export const App: React.FC = () => {
               <Route path="blank-qr" element={<BlankQR />} />
               <Route path="customers" element={<Customers />} />
               <Route path="customers/:id" element={<CustomerProfile />} />
+              <Route path="accounts" element={<CustomerAccounts />} />
+              <Route path="hisaab" element={<CustomerAccounts />} />
               <Route path="products" element={<Products />} />
               <Route path="inventory" element={<Inventory />} />
               <Route path="customer-rates" element={<CustomerRates />} />

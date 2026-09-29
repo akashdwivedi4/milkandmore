@@ -27,9 +27,11 @@ export const errorHandler = (err: any, req: Request, res: Response, next: NextFu
   if (err.code === 11000) {
     const keys = Object.keys((err as any).keyValue || {});
     const field = keys.find((k) => k !== 'businessId') || keys[0] || 'field';
+    const errorMsg = `Duplicate value entered for ${field}. It must be unique.`;
     res.status(409).json({
       success: false,
-      error: `Duplicate value entered for ${field}. It must be unique.`,
+      error: errorMsg,
+      message: errorMsg,
     });
     return;
   }
@@ -37,18 +39,22 @@ export const errorHandler = (err: any, req: Request, res: Response, next: NextFu
   // Handle Mongoose Validation Error
   if (err.name === 'ValidationError') {
     const messages = Object.values(err.errors || {}).map((e: any) => e.message);
+    const errorMsg = messages.join(', ') || 'Validation error.';
     res.status(400).json({
       success: false,
-      error: messages.join(', ') || 'Validation error.',
+      error: errorMsg,
+      message: errorMsg,
     });
     return;
   }
 
   // Handle Mongoose CastError (invalid ObjectId)
   if (err.name === 'CastError') {
+    const errorMsg = `Invalid identifier: ${err.value}`;
     res.status(400).json({
       success: false,
-      error: `Invalid identifier: ${err.value}`,
+      error: errorMsg,
+      message: errorMsg,
     });
     return;
   }
@@ -58,6 +64,7 @@ export const errorHandler = (err: any, req: Request, res: Response, next: NextFu
     res.status(400).json({
       success: false,
       error: 'Insufficient stock available.',
+      message: 'Insufficient stock available.',
       details: err.message,
     });
     return;
@@ -67,12 +74,15 @@ export const errorHandler = (err: any, req: Request, res: Response, next: NextFu
     res.status(err.statusCode).json({
       success: false,
       error: err.message,
+      message: err.message,
     });
     return;
   }
 
+  const errorMsg = err.message || 'Something went wrong. Please try again.';
   res.status(err.statusCode || 500).json({
     success: false,
-    error: err.message || 'Something went wrong. Please try again.',
+    error: errorMsg,
+    message: errorMsg,
   });
 };

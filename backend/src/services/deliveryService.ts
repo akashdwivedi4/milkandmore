@@ -1,6 +1,7 @@
 import { Types } from 'mongoose';
 import { Delivery, IDelivery, DeliveryShift } from '../models/Delivery';
 import { Customer } from '../models/Customer';
+import { CustomerPayment } from '../models/CustomerPayment';
 import { Product } from '../models/Product';
 import { CustomerRate } from '../models/CustomerRate';
 import { adjustStock } from './inventoryService';
@@ -160,37 +161,69 @@ export const recordDelivery = async (
 
     const delivery = deliveryDocs[0];
 
-    // Double-entry accounting: Debit Customer Receivables, Credit Sales
+    // Double-entry accounting: Check available advance credit to consume CUSTOMER_ADVANCES first
     if (delivery.totalAmount > 0) {
+      const [allPriorDeliveries, allPriorPayments] = await Promise.all([
+        Delivery.find({ businessId: bizId, customerId: custId, status: 'DELIVERED', _id: { $ne: delivery._id } }).session(session || null),
+        CustomerPayment.find({ businessId: bizId, customerId: custId }).session(session || null),
+      ]);
+      const priorDelTotal = roundMoney(allPriorDeliveries.reduce((sum: number, d: any) => sum + (d.totalAmount || 0), 0));
+      const priorPayTotal = roundMoney(
+        allPriorPayments.reduce((sum: number, p: any) => sum + (p.paymentType === 'REFUND' ? -(p.amount || 0) : (p.amount || 0)), 0)
+      );
+      const opNet = customer.openingBalanceType === 'ADVANCE'
+        ? -roundMoney(customer.openingBalance || 0)
+        : roundMoney(customer.openingBalance || 0);
+      const priorNet = roundMoney(opNet + priorDelTotal - priorPayTotal);
+      const availableCredit = Math.max(0, -priorNet);
+
+      const creditUsed = roundMoney(Math.min(delivery.totalAmount, availableCredit));
+      const receivableCharged = roundMoney(Math.max(0, delivery.totalAmount - creditUsed));
+
+      const journalLines: any[] = [];
+      if (creditUsed > 0) {
+        journalLines.push({
+          accountCode: CHART_OF_ACCOUNTS.CUSTOMER_ADVANCES.code,
+          accountName: CHART_OF_ACCOUNTS.CUSTOMER_ADVANCES.name,
+          accountType: 'LIABILITY',
+          debit: creditUsed,
+          credit: 0,
+          partyType: 'CUSTOMER',
+          partyId: custId,
+          partyName: customer.name,
+        });
+      }
+      if (receivableCharged > 0) {
+        journalLines.push({
+          accountCode: CHART_OF_ACCOUNTS.CUSTOMER_RECEIVABLES.code,
+          accountName: CHART_OF_ACCOUNTS.CUSTOMER_RECEIVABLES.name,
+          accountType: 'ASSET',
+          debit: receivableCharged,
+          credit: 0,
+          partyType: 'CUSTOMER',
+          partyId: custId,
+          partyName: customer.name,
+        });
+      }
+      journalLines.push({
+        accountCode: CHART_OF_ACCOUNTS.MILK_SALES.code,
+        accountName: CHART_OF_ACCOUNTS.MILK_SALES.name,
+        accountType: 'INCOME',
+        debit: 0,
+        credit: delivery.totalAmount,
+        partyType: 'CUSTOMER',
+        partyId: custId,
+        partyName: customer.name,
+      });
+
       await postJournalEntry(
         {
           businessId: bizId,
           date: deliveryDate,
           sourceType: 'DELIVERY',
           sourceId: delivery._id,
-          narration: `${shift} delivery to ${customer.name}${isAdditional ? ' (Extra Drop)' : ''}: ${processedItems.map((i) => `${i.productName} (${i.quantity} ${i.unit})`).join(', ')}`,
-          lines: [
-            {
-              accountCode: CHART_OF_ACCOUNTS.CUSTOMER_RECEIVABLES.code,
-              accountName: CHART_OF_ACCOUNTS.CUSTOMER_RECEIVABLES.name,
-              accountType: 'ASSET',
-              debit: delivery.totalAmount,
-              credit: 0,
-              partyType: 'CUSTOMER',
-              partyId: custId,
-              partyName: customer.name,
-            },
-            {
-              accountCode: CHART_OF_ACCOUNTS.MILK_SALES.code,
-              accountName: CHART_OF_ACCOUNTS.MILK_SALES.name,
-              accountType: 'INCOME',
-              debit: 0,
-              credit: delivery.totalAmount,
-              partyType: 'CUSTOMER',
-              partyId: custId,
-              partyName: customer.name,
-            },
-          ],
+          narration: `${shift} delivery to ${customer.name}${isAdditional ? ' (Extra Drop)' : ''}${creditUsed > 0 ? ` [Applied Credit: ₹${creditUsed}]` : ''}: ${processedItems.map((i) => `${i.productName} (${i.quantity} ${i.unit})`).join(', ')}`,
+          lines: journalLines,
           userId,
         },
         session

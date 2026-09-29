@@ -70,12 +70,23 @@ export const resolveQRCode = async (
   const bizId = new Types.ObjectId(businessId);
   const cleanCode = qrCodeString.trim();
 
-  // Find in QRCode collection or directly match customer's assignedQr
+  // Extract portal token if full URL was scanned
+  const portalUrlMatch = cleanCode.match(/\/customer\/portal\/([a-zA-Z0-9_-]+)/);
+  const portalToken = portalUrlMatch ? portalUrlMatch[1] : cleanCode;
+
+  // Find in QRCode collection or directly match customer's assignedQr or customerPortalToken
   let qrDoc = await QRCode.findOne({ businessId: bizId, qrCode: cleanCode });
 
-  // If not found in QRCode table, check if a Customer has this as assignedQr (e.g. legacy token or custom code)
+  // If not found in QRCode table, check if a Customer has this as assignedQr or customerPortalToken
   if (!qrDoc) {
-    const custDirect = await Customer.findOne({ businessId: bizId, assignedQr: cleanCode });
+    const custDirect = await Customer.findOne({
+      businessId: bizId,
+      $or: [
+        { assignedQr: cleanCode },
+        { customerPortalToken: portalToken },
+        { customerPortalToken: cleanCode },
+      ],
+    });
     if (custDirect) {
       qrDoc = await QRCode.findOneAndUpdate(
         { businessId: bizId, qrCode: cleanCode },

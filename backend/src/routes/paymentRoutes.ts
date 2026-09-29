@@ -3,6 +3,7 @@ import {
   getPayments,
   createPaymentHandler,
   deletePaymentHandler,
+  updatePaymentHandler,
 } from '../controllers/paymentController';
 import { authMiddleware } from '../middleware/auth';
 import { requireOwnerOrAdmin, requireAnyStaff } from '../middleware/roles';
@@ -15,6 +16,7 @@ router.use(authMiddleware);
 
 router.get('/', requireAnyStaff, asyncHandler(getPayments));
 router.post('/', requireAnyStaff, idempotencyMiddleware, asyncHandler(createPaymentHandler));
+router.put('/:id', requireOwnerOrAdmin, asyncHandler(updatePaymentHandler));
 router.delete('/:id', requireOwnerOrAdmin, asyncHandler(deletePaymentHandler));
 
 export default router;

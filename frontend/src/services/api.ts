@@ -194,6 +194,19 @@ class ApiService {
     });
   }
 
+  async refundCustomerCredit(
+    customerId: string,
+    data: { amount: number; paymentMode: string; notes?: string }
+  ) {
+    return this.request<{ success: boolean; message: string; data: any }>(
+      `/customers/${customerId}/refund-credit`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    );
+  }
+
   // QR Management
   async generateQRs(count: number = 1, prefix: string = 'MM-QR-') {
     return this.request<{ success: boolean; data: any[]; count: number }>('/qr/generate', {
@@ -407,6 +420,18 @@ class ApiService {
     });
   }
 
+  // Purchase Returns
+  async getPurchaseReturns() {
+    return this.request<{ success: boolean; data: any[] }>('/purchases/returns');
+  }
+
+  async createPurchaseReturn(data: any) {
+    return this.request<{ success: boolean; message?: string; data: any }>('/purchases/returns', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
   // Suppliers
   async getSuppliers(params: { search?: string; active?: boolean } = {}) {
     const query = new URLSearchParams();
@@ -527,8 +552,18 @@ class ApiService {
   }
 
   // Payments (Customer)
-  async getPayments(customerId?: string) {
-    const q = customerId ? `?customerId=${customerId}` : '';
+  async getPayments(
+    params?: string | { customerId?: string; startDate?: string; endDate?: string }
+  ) {
+    if (typeof params === 'string') {
+      const q = params ? `?customerId=${encodeURIComponent(params)}` : '';
+      return this.request<{ success: boolean; data: any[] }>(`/payments${q}`);
+    }
+    const query = new URLSearchParams();
+    if (params?.customerId) query.set('customerId', params.customerId);
+    if (params?.startDate) query.set('startDate', params.startDate);
+    if (params?.endDate) query.set('endDate', params.endDate);
+    const q = query.toString() ? `?${query.toString()}` : '';
     return this.request<{ success: boolean; data: any[] }>(`/payments${q}`);
   }
 
@@ -537,6 +572,9 @@ class ApiService {
       customer_id: string;
       amount: number;
       payment_method: string;
+      payment_date?: string;
+      paid_at?: string;
+      reference_number?: string;
       notes?: string;
     },
     idempotencyKey?: string
@@ -551,6 +589,33 @@ class ApiService {
     );
   }
 
+  async updatePayment(
+    paymentId: string,
+    data: {
+      amount?: number;
+      payment_method?: string;
+      paymentMode?: string;
+      payment_date?: string;
+      reference_number?: string;
+      referenceNumber?: string;
+      notes?: string;
+    }
+  ) {
+    return this.request<{ success: boolean; data: any; message?: string }>(
+      `/payments/${paymentId}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }
+    );
+  }
+
+  async deletePayment(paymentId: string) {
+    return this.request<{ success: boolean; message?: string }>(`/payments/${paymentId}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Statements / Bills
   async getStatement(customerId: string, startDate?: string, endDate?: string) {
     const query = new URLSearchParams({ customerId });
@@ -559,8 +624,6 @@ class ApiService {
 
     return this.request<{ success: boolean; data: any }>(`/bills/statement?${query.toString()}`);
   }
-
-
 
   async getAccountBalances() {
     return this.request<{ success: boolean; data: any }>('/reports/accounts');
@@ -576,8 +639,12 @@ class ApiService {
     return this.request<{ success: boolean; data: any[] }>('/reports/products');
   }
 
-  async getCustomerReport() {
-    return this.request<{ success: boolean; data: any[] }>('/reports/customers');
+  async getCustomerReport(params?: { status?: string; includeInactive?: boolean }) {
+    const query = new URLSearchParams();
+    if (params?.status) query.set('status', params.status);
+    if (params?.includeInactive) query.set('includeInactive', 'true');
+    const q = query.toString() ? `?${query.toString()}` : '';
+    return this.request<{ success: boolean; data: any[] }>(`/reports/customers${q}`);
   }
 
   // Settings & Staff
@@ -654,6 +721,20 @@ class ApiService {
     return this.request<{ success: boolean; data: any }>(`/accounting/general-ledger?${q.toString()}`);
   }
 
+  async getJournalEntries(params?: {
+    startDate?: string;
+    endDate?: string;
+    sourceType?: string;
+    limit?: number;
+  }) {
+    const q = new URLSearchParams();
+    if (params?.startDate) q.append('startDate', params.startDate);
+    if (params?.endDate) q.append('endDate', params.endDate);
+    if (params?.sourceType) q.append('sourceType', params.sourceType);
+    if (params?.limit) q.append('limit', String(params.limit));
+    return this.request<{ success: boolean; data: any[] }>(`/accounting/journal-entries?${q.toString()}`);
+  }
+
   async getTrialBalance(asOfDate?: string) {
     const q = asOfDate ? `?asOfDate=${asOfDate}` : '';
     return this.request<{ success: boolean; data: any }>(`/accounting/trial-balance${q}`);
@@ -713,6 +794,100 @@ class ApiService {
 
   async getReconciliation() {
     return this.request<{ success: boolean; data: any }>('/accounting/reconciliation');
+  }
+
+  // Customer QR Portal
+  async getCustomerPortalInfo(token: string) {
+    return this.request<{
+      success: boolean;
+      data: {
+        valid: boolean;
+        maskedMobile: string;
+        businessName: string;
+        token: string;
+      };
+    }>(`/customer-portal/verify-info/${encodeURIComponent(token)}`);
+  }
+
+  async requestCustomerPortalOtp(token: string) {
+    return this.request<{
+      success: boolean;
+      message: string;
+      cooldownSeconds: number;
+    }>('/customer-portal/request-otp', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    });
+  }
+
+  async verifyCustomerPortalOtp(token: string, otp: string) {
+    return this.request<{
+      success: boolean;
+      sessionToken: string;
+      message: string;
+    }>('/customer-portal/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ token, otp }),
+    });
+  }
+
+  async getCustomerPortalProfile(sessionToken?: string) {
+    const headers: Record<string, string> = {};
+    if (sessionToken) headers['Authorization'] = `Bearer ${sessionToken}`;
+    return this.request<{ success: boolean; data: any }>('/customer-portal/me', { headers });
+  }
+
+  async getCustomerPortalToday(sessionToken?: string) {
+    const headers: Record<string, string> = {};
+    if (sessionToken) headers['Authorization'] = `Bearer ${sessionToken}`;
+    return this.request<{ success: boolean; data: any }>('/customer-portal/today', { headers });
+  }
+
+  async getCustomerPortalDeliveries(sessionToken?: string) {
+    const headers: Record<string, string> = {};
+    if (sessionToken) headers['Authorization'] = `Bearer ${sessionToken}`;
+    return this.request<{ success: boolean; data: { totalDeliveries: number; items: any[] } }>(
+      '/customer-portal/deliveries',
+      { headers }
+    );
+  }
+
+  async getCustomerPortalPayments(sessionToken?: string) {
+    const headers: Record<string, string> = {};
+    if (sessionToken) headers['Authorization'] = `Bearer ${sessionToken}`;
+    return this.request<{ success: boolean; data: any[] }>('/customer-portal/payments', { headers });
+  }
+
+  async getCustomerPortalStatement(sessionToken?: string) {
+    const headers: Record<string, string> = {};
+    if (sessionToken) headers['Authorization'] = `Bearer ${sessionToken}`;
+    return this.request<{ success: boolean; data: any }>('/customer-portal/statement', { headers });
+  }
+
+  async customerPortalLogout() {
+    return this.request<{ success: boolean; message: string }>('/customer-portal/logout', {
+      method: 'POST',
+    });
+  }
+
+  // Admin Customer QR Actions
+  async regenerateCustomerQr(customerId: string) {
+    return this.request<{
+      success: boolean;
+      message: string;
+      data: { customerPortalToken: string };
+    }>(`/customers/${customerId}/regenerate-qr`, {
+      method: 'POST',
+    });
+  }
+
+  async revokeCustomerQr(customerId: string) {
+    return this.request<{ success: boolean; message: string }>(
+      `/customers/${customerId}/revoke-qr`,
+      {
+        method: 'POST',
+      }
+    );
   }
 }
 

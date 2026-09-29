@@ -410,4 +410,276 @@ describe('Vyapar-Grade Double-Entry Accounting Test Suite', () => {
     expect(payRes.body.success).toBe(true);
     expect(payRes.body.data.totalPayable).toBeGreaterThan(0);
   });
+
+  it('16. POST /api/purchases/returns records purchase return, reduces stock & payable, and posts balanced journal', async () => {
+    // Check initial stock
+    const prodBefore = await Product.findById(milkProductId);
+    const initialStock = prodBefore?.currentStock || 0;
+
+    const suppBefore = await Supplier.findById(supplierId);
+    const initialPayable = suppBefore?.currentPayable || 0;
+
+    const returnRes = await request(app)
+      .post('/api/purchases/returns')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({
+        supplierId,
+        returnDate: '2026-09-08',
+        reason: 'Sour milk return',
+        items: [
+          {
+            productId: milkProductId,
+            quantity: 5,
+            unit: 'L',
+            rate: 45,
+          },
+        ],
+      });
+
+    expect(returnRes.status).toBe(201);
+    expect(returnRes.body.success).toBe(true);
+    expect(returnRes.body.data.totalAmount).toBe(225); // 5 * 45 = 225
+
+    // Stock reduced by 5
+    const prodAfter = await Product.findById(milkProductId);
+    expect(prodAfter?.currentStock).toBe(initialStock - 5);
+
+    // Supplier payable reduced by 225
+    const suppAfter = await Supplier.findById(supplierId);
+    expect(suppAfter?.currentPayable).toBe(initialPayable - 225);
+
+    // Verify balanced journal: Dr Supplier Payable 225, Cr Inventory 225
+    const returnJournal = await JournalEntry.findOne({
+      businessId,
+      sourceType: 'PURCHASE_RETURN',
+      sourceId: returnRes.body.data._id,
+    });
+
+    expect(returnJournal).toBeTruthy();
+    expect(returnJournal?.totalDebit).toBe(225);
+    expect(returnJournal?.totalCredit).toBe(225);
+  });
+
+  it('17. Section 49 Critical Scenario: Customer Advance lifecycle (Outstanding 500 -> Pay 1000 -> Credit 500 -> Bill 300 -> Credit 200, Outstanding 0 throughout)', async () => {
+    // 1. Create a customer with initial outstanding of 500
+    const custRes = await request(app)
+      .post('/api/customers')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({
+        name: 'Arun Kumar AdvanceTest',
+        mobile: '9777788888',
+        address: 'Plot 42, Green Avenue',
+        opening_balance: 500,
+        opening_balance_type: 'DUE',
+      });
+
+    expect(custRes.status).toBe(201);
+    const advCustId = custRes.body.data.id;
+
+    // Verify initial statement: Outstanding = 500, Credit = 0
+    let stmtRes = await request(app)
+      .get(`/api/bills/statement/${advCustId}`)
+      .set('Authorization', `Bearer ${ownerToken}`);
+
+    expect(stmtRes.status).toBe(200);
+    expect(stmtRes.body.data.summary.finalOutstanding).toBe(500);
+    expect(stmtRes.body.data.summary.customerCredit).toBe(0);
+
+    // 2. Customer pays 1,000 (Overpayment by 500)
+    const payRes = await request(app)
+      .post('/api/payments')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({
+        customer_id: advCustId,
+        amount: 1000,
+        payment_method: 'UPI',
+        payment_date: '2026-09-08',
+      });
+
+    expect(payRes.status).toBe(201);
+
+    // Verify journal split: Dr UPI (1000), Cr Receivables (500), Cr Advances (500)
+    const payJournal = await JournalEntry.findOne({
+      businessId,
+      sourceType: 'CUSTOMER_PAYMENT',
+      sourceId: payRes.body.data.id || payRes.body.data._id,
+    });
+
+    expect(payJournal).toBeTruthy();
+    expect(payJournal?.totalDebit).toBe(1000);
+    expect(payJournal?.totalCredit).toBe(1000);
+
+    // Check lines
+    const recLine = payJournal?.lines.find((l) => l.accountCode === '1100');
+    const advLine = payJournal?.lines.find((l) => l.accountCode === '2150');
+    expect(recLine?.credit).toBe(500);
+    expect(advLine?.credit).toBe(500);
+
+    // 3. Verify Outstanding = 0 and Customer Credit = 500 (Never negative outstanding!)
+    stmtRes = await request(app)
+      .get(`/api/bills/statement/${advCustId}`)
+      .set('Authorization', `Bearer ${ownerToken}`);
+
+    expect(stmtRes.status).toBe(200);
+    expect(stmtRes.body.data.summary.finalOutstanding).toBe(0);
+    expect(stmtRes.body.data.summary.customerCredit).toBe(500);
+    expect(stmtRes.body.data.accountStatus).toBe('CUSTOMER_CREDIT');
+
+    // 4. New delivery of 5 Litres Milk @ 60 = 300
+    const delivRes = await request(app)
+      .post('/api/deliveries')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({
+        customerId: advCustId,
+        deliveryDate: '2026-09-08',
+        shift: 'MORNING',
+        items: [
+          {
+            productId: milkProductId,
+            quantity: 5,
+            unit: 'L',
+            rate: 60,
+          },
+        ],
+      });
+
+    expect(delivRes.status).toBe(201);
+    expect(delivRes.body.data.totalAmount).toBe(300);
+
+    // Verify delivery journal consumed the credit: Dr Customer Advances (300), Cr Sales (300)
+    const delivJournal = await JournalEntry.findOne({
+      businessId,
+      sourceType: 'DELIVERY',
+      sourceId: delivRes.body.data._id,
+    });
+
+    expect(delivJournal).toBeTruthy();
+    expect(delivJournal?.totalDebit).toBe(300);
+    expect(delivJournal?.totalCredit).toBe(300);
+    const advDebitLine = delivJournal?.lines.find((l) => l.accountCode === '2150');
+    expect(advDebitLine?.debit).toBe(300);
+
+    // 5. Verify statement after delivery: Outstanding remains 0, Customer Credit is now 200
+    stmtRes = await request(app)
+      .get(`/api/bills/statement/${advCustId}`)
+      .set('Authorization', `Bearer ${ownerToken}`);
+
+    expect(stmtRes.status).toBe(200);
+    expect(stmtRes.body.data.summary.finalOutstanding).toBe(0);
+    expect(stmtRes.body.data.summary.customerCredit).toBe(200);
+    expect(stmtRes.body.data.accountStatus).toBe('CUSTOMER_CREDIT');
+  });
+
+  it('18. Customer Credit Refund: refunds unused advance credit, reduces cash and advances liability', async () => {
+    // Find customer from test 17 who has 200 credit
+    const cust = await Customer.findOne({ businessId, mobile: '9777788888' });
+    expect(cust).toBeTruthy();
+
+    // Try to refund more than available credit (e.g. 500 > 200) -> should fail 400
+    const failRes = await request(app)
+      .post(`/api/customers/${cust!._id}/refund-credit`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({
+        amount: 500,
+        paymentMode: 'CASH',
+      });
+
+    expect(failRes.status).toBe(400);
+    expect(failRes.body.error || failRes.body.message).toMatch(/available advance credit/i);
+
+    // Now refund the exact 200
+    const refundRes = await request(app)
+      .post(`/api/customers/${cust!._id}/refund-credit`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({
+        amount: 200,
+        paymentMode: 'CASH',
+        notes: 'Customer asked for advance return',
+      });
+
+    expect(refundRes.status).toBe(201);
+    expect(refundRes.body.success).toBe(true);
+
+    // Verify statement now has Outstanding = 0 and Customer Credit = 0 (SETTLED)
+    const stmtRes = await request(app)
+      .get(`/api/bills/statement/${cust!._id}`)
+      .set('Authorization', `Bearer ${ownerToken}`);
+
+    expect(stmtRes.status).toBe(200);
+    expect(stmtRes.body.data.summary.finalOutstanding).toBe(0);
+    expect(stmtRes.body.data.summary.customerCredit).toBe(0);
+    expect(stmtRes.body.data.accountStatus).toBe('SETTLED');
+
+    // Verify refund journal: Dr Customer Advances (200), Cr Cash (200)
+    const refJournal = await JournalEntry.findOne({
+      businessId,
+      sourceType: 'CUSTOMER_REFUND',
+      sourceId: refundRes.body.data.id || refundRes.body.data._id,
+    });
+
+    expect(refJournal).toBeTruthy();
+    expect(refJournal?.totalDebit).toBe(200);
+    expect(refJournal?.totalCredit).toBe(200);
+    const advLine = refJournal?.lines.find((l) => l.accountCode === '2150');
+    expect(advLine?.debit).toBe(200);
+  });
+
+  it('19. Customer creation with opening_balance_type: ADVANCE sets initial credit liability', async () => {
+    const res = await request(app)
+      .post('/api/customers')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({
+        name: 'Prepaid VIP Customer',
+        mobile: '9666655555',
+        address: 'Sector 9, Prime Block',
+        opening_balance: 1000,
+        opening_balance_type: 'ADVANCE',
+      });
+
+    expect(res.status).toBe(201);
+    const vipId = res.body.data.id;
+
+    // Verify statement: Outstanding = 0, Credit = 1000
+    const stmtRes = await request(app)
+      .get(`/api/bills/statement/${vipId}`)
+      .set('Authorization', `Bearer ${ownerToken}`);
+
+    expect(stmtRes.status).toBe(200);
+    expect(stmtRes.body.data.summary.finalOutstanding).toBe(0);
+    expect(stmtRes.body.data.summary.customerCredit).toBe(1000);
+    expect(stmtRes.body.data.accountStatus).toBe('CUSTOMER_CREDIT');
+
+    // Verify journal: Dr Opening Equity (1000), Cr Customer Advances (1000)
+    const openJournal = await JournalEntry.findOne({
+      businessId,
+      sourceType: 'OPENING_BALANCE',
+      sourceId: vipId,
+    });
+
+    expect(openJournal).toBeTruthy();
+    expect(openJournal?.totalDebit).toBe(1000);
+    expect(openJournal?.totalCredit).toBe(1000);
+    const advLine = openJournal?.lines.find((l) => l.accountCode === '2150');
+    expect(advLine?.credit).toBe(1000);
+  });
+
+  it('20. Final Accounting Integrity: Trial Balance & Balance Sheet remain 100% balanced', async () => {
+    const tbRes = await request(app)
+      .get('/api/accounting/trial-balance')
+      .set('Authorization', `Bearer ${ownerToken}`);
+
+    expect(tbRes.status).toBe(200);
+    expect(tbRes.body.data.isBalanced).toBe(true);
+    expect(tbRes.body.data.difference).toBe(0);
+    expect(tbRes.body.data.grandTotalDebit).toBe(tbRes.body.data.grandTotalCredit);
+
+    const bsRes = await request(app)
+      .get('/api/accounting/balance-sheet')
+      .set('Authorization', `Bearer ${ownerToken}`);
+
+    expect(bsRes.status).toBe(200);
+    expect(bsRes.body.data.isBalanced).toBe(true);
+    expect(bsRes.body.data.difference).toBe(0);
+    expect(bsRes.body.data.totalAssets).toBe(bsRes.body.data.totalLiabilitiesAndEquity);
+  });
 });

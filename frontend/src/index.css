@@ -8,13 +8,45 @@
     -webkit-tap-highlight-color: transparent;
   }
   ::selection {
-    background-color: #a0dceb;
+    background-color: #6b1724;
     color: #ffffff;
+  }
+}
+
+@layer components {
+  .irujul-tab-active {
+    @apply bg-[#2E7D32] text-white font-bold px-3.5 py-1.5 text-xs rounded-t-lg shadow-sm flex items-center gap-2 border-t-2 border-emerald-400;
+  }
+
+  .irujul-table-header {
+    @apply bg-slate-100 text-slate-700 uppercase font-bold text-[11px] tracking-wider border-b border-slate-300 select-none;
+  }
+
+  .irujul-table-cell {
+    @apply px-3 py-2 text-xs text-slate-800 border-b border-slate-200;
+  }
+
+  .irujul-btn-green {
+    @apply bg-[#2E7D32] hover:bg-[#1B5E20] active:bg-[#14532D] text-white font-bold text-xs px-3.5 py-2 rounded-lg transition-all shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50;
+  }
+
+  .irujul-btn-maroon {
+    @apply bg-[#6B1724] hover:bg-[#55121D] active:bg-[#33070E] text-white font-bold text-xs px-3.5 py-2 rounded-lg transition-all shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50;
+  }
+
+  .irujul-section-title {
+    @apply text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5 border-l-4 border-[#6B1724] pl-2;
   }
 }
 
 /* Custom Print CSS for A4 Bills and QR Cards */
 @media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
   body {
     background: #ffffff !important;
     color: #000000 !important;
@@ -40,6 +72,6 @@
 
   @page {
     size: A4 portrait;
-    margin: 15mm;
+    margin: 10mm;
   }
 }

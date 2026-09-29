@@ -14,7 +14,7 @@ export const getCustomerStatement = async (req: AuthRequest, res: Response): Pro
   if (!req.user) throw new AppError('Unauthorized', 401);
 
   const { customerId, customer_id, startDate, endDate } = req.query;
-  const cId = customerId || customer_id;
+  const cId = customerId || customer_id || req.params.id || req.params.customerId;
 
   if (!cId) {
     throw new AppError('customerId is required.', 400);
@@ -128,7 +128,9 @@ export const getCustomerStatement = async (req: AuthRequest, res: Response): Pro
 
   // Compute previous balance before cutoff date (sDate if date filter applied, otherwise todayStr)
   const cutoffDate = sDate || todayStr;
-  let previousBalance = customer.openingBalance || 0;
+  const isOpeningAdvance = customer.openingBalanceType === 'ADVANCE';
+  const opNet = isOpeningAdvance ? -roundMoney(customer.openingBalance || 0) : roundMoney(customer.openingBalance || 0);
+
   const priorDeliveries = await Delivery.find({
     businessId: bizId,
     customerId: custId,
@@ -141,8 +143,10 @@ export const getCustomerStatement = async (req: AuthRequest, res: Response): Pro
     paymentDate: { $lt: cutoffDate },
   });
   const priorDelTotal = priorDeliveries.reduce((sum, d) => sum + (d.totalAmount || 0), 0);
-  const priorPayTotal = priorPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
-  previousBalance = roundMoney((customer.openingBalance || 0) + priorDelTotal - priorPayTotal);
+  const priorPayTotal = priorPayments.reduce((sum, p) => sum + (p.paymentType === 'REFUND' ? -(p.amount || 0) : (p.amount || 0)), 0);
+  const priorNet = roundMoney(opNet + priorDelTotal - priorPayTotal);
+  const previousBalance = Math.max(0, priorNet);
+  const previousCredit = Math.max(0, -priorNet);
 
   const periodLabel = sDate && eDate
     ? `${sDate} to ${eDate}`
@@ -183,7 +187,13 @@ export const getCustomerStatement = async (req: AuthRequest, res: Response): Pro
         mobile: customer.mobile,
         address: customer.address || null,
         openingBalance: customer.openingBalance || 0,
+        openingBalanceType: customer.openingBalanceType || 'DUE',
         customerSince: customer.customerSince,
+        serviceEndDate: customer.serviceEndDate || null,
+        active: customer.status === 'ACTIVE',
+        status: customer.status,
+        assignedQr: customer.assignedQr || null,
+        customerPortalToken: customer.customerPortalToken || null,
       },
       period: {
         startDate: sDate || null,
@@ -202,7 +212,9 @@ export const getCustomerStatement = async (req: AuthRequest, res: Response): Pro
       })),
       summary: {
         openingBalance: customer.openingBalance || 0,
+        openingBalanceType: customer.openingBalanceType || 'DUE',
         previousBalance,
+        previousCredit,
         todayDropsCount,
         todayDeliveryAmount,
         todayDrops: {
@@ -218,6 +230,8 @@ export const getCustomerStatement = async (req: AuthRequest, res: Response): Pro
         totalPaymentsCount: periodPayments.length,
         periodPaymentsAmount,
         finalOutstanding: ledger.currentOutstanding,
+        customerCredit: ledger.customerCredit,
+        accountStatus: ledger.accountStatus,
         amountDue: ledger.currentOutstanding,
         netPayable: ledger.currentOutstanding,
       },

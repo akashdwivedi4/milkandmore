@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Clock,
@@ -13,7 +13,17 @@ import {
   Settings,
   Scale,
   TrendingDown,
+  TrendingUp,
   FileSpreadsheet,
+  Calculator,
+  Scan,
+  FolderTree,
+  BookOpen,
+  Building,
+  Wallet,
+  Calendar,
+  History,
+  Tag,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -23,6 +33,7 @@ interface SidebarNavItem {
   icon: any;
   exact?: boolean;
   adminOnly?: boolean;
+  highlight?: boolean;
 }
 
 interface SidebarSection {
@@ -32,58 +43,92 @@ interface SidebarSection {
 
 export const DesktopSidebar: React.FC = () => {
   const { role } = useAuth();
+  const location = useLocation();
   const isOwnerOrAdmin = role === 'OWNER' || role === 'ADMIN';
+
+  const isItemActive = (to: string, exact?: boolean) => {
+    if (to.includes('?')) {
+      return `${location.pathname}${location.search}` === to;
+    }
+    if (to === '/financials') {
+      return location.pathname === '/financials' && !location.search;
+    }
+    if (exact) {
+      return location.pathname === to && !location.search;
+    }
+    return location.pathname === to || (location.pathname.startsWith(to + '/') && to !== '/');
+  };
 
   const sections: SidebarSection[] = [
     {
-      title: 'Operations',
+      title: 'Dairy Operations',
       items: [
         { to: '/', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-        { to: '/today', label: "Today's Delivery", icon: Clock },
-        { to: '/scan', label: 'Door QR Scanner', icon: QrCode },
-        { to: '/blank-qr', label: 'Blank QR Tags', icon: QrCode },
+        { to: '/customers', label: 'Customers Master', icon: Users },
+        { to: '/today', label: 'Daily Delivery', icon: Clock },
+        { to: '/accounts', label: 'Customer Accounts', icon: Calculator, highlight: true },
       ],
     },
     {
-      title: 'Parties & CRM',
+      title: 'Sales & Collections',
       items: [
-        { to: '/customers', label: 'Customers', icon: Users },
+        { to: '/payments', label: 'Payment Register', icon: Receipt },
+        { to: '/bills', label: 'Bills & Statements', icon: FileText },
+        { to: '/financials?tab=ageing', label: 'Receivables Ageing', icon: History, adminOnly: true },
+      ],
+    },
+    {
+      title: 'Purchases & Suppliers',
+      items: [
+        { to: '/purchases', label: 'Milk Purchases & Returns', icon: Truck, adminOnly: true },
         { to: '/suppliers', label: 'Suppliers & Vendors', icon: Users, adminOnly: true },
       ],
     },
     {
-      title: 'Sales & Billing',
-      items: [
-        { to: '/bills', label: 'Invoices & Statements', icon: FileText },
-        { to: '/payments', label: 'Customer Payments', icon: Receipt },
-      ],
-    },
-    {
-      title: 'Purchases & Expenses',
-      items: [
-        { to: '/purchases', label: 'Purchases', icon: Truck, adminOnly: true },
-        { to: '/expenses', label: 'Expenses', icon: TrendingDown, adminOnly: true },
-      ],
-    },
-    {
-      title: 'Inventory & Items',
+      title: 'Inventory & Rates',
       items: [
         { to: '/products', label: 'Products & Pricing', icon: Package },
-        { to: '/inventory', label: 'Live Stock & Logs', icon: Package },
+        { to: '/inventory', label: 'Live Stock & Inventory', icon: Package },
+        { to: '/customer-rates', label: 'Special Customer Rates', icon: Tag, adminOnly: true },
       ],
     },
     {
-      title: 'Accounting & Reports',
+      title: 'Expenses',
       items: [
-        { to: '/financials', label: 'Books & Financials', icon: Scale, adminOnly: true },
-        { to: '/reports', label: 'Reports & Ageing', icon: BarChart3, adminOnly: true },
+        { to: '/expenses', label: 'Dairy Expenses', icon: TrendingDown, adminOnly: true },
       ],
     },
     {
-      title: 'Administration',
+      title: 'Accounting',
+      items: [
+        { to: '/financials?tab=chart', label: 'Chart of Accounts', icon: FolderTree, adminOnly: true },
+        { to: '/financials?tab=journal', label: 'Journal Entries', icon: FileText, adminOnly: true },
+        { to: '/financials?tab=ledger', label: 'General Ledger', icon: BookOpen, adminOnly: true },
+        { to: '/financials?tab=trial_balance', label: 'Trial Balance', icon: Scale, adminOnly: true },
+        { to: '/financials?tab=cash_bank', label: 'Cash & Bank Books', icon: Wallet, adminOnly: true },
+        { to: '/financials?tab=day_book', label: 'Day Book', icon: Calendar, adminOnly: true },
+      ],
+    },
+    {
+      title: 'Financial Reports',
+      items: [
+        { to: '/financials?tab=pnl', label: 'Profit & Loss (P&L)', icon: TrendingUp, adminOnly: true },
+        { to: '/financials?tab=balance_sheet', label: 'Balance Sheet', icon: Building, adminOnly: true },
+        { to: '/reports', label: 'Operational Reports', icon: BarChart3, adminOnly: true },
+      ],
+    },
+    {
+      title: 'QR & Digital Tools',
+      items: [
+        { to: '/blank-qr', label: 'Blank QR Management', icon: QrCode },
+        { to: '/scan', label: 'Door QR Scanner', icon: Scan },
+      ],
+    },
+    {
+      title: 'Reports & Admin',
       items: [
         { to: '/exports', label: 'Data Export (CSV)', icon: FileSpreadsheet, adminOnly: true },
-        { to: '/settings', label: 'Settings', icon: Settings, adminOnly: true },
+        { to: '/settings', label: 'Settings & Dairy Info', icon: Settings, adminOnly: true },
       ],
     },
   ];
@@ -102,21 +147,26 @@ export const DesktopSidebar: React.FC = () => {
               </p>
               {visibleItems.map((item) => {
                 const Icon = item.icon;
+                const active = isItemActive(item.to, item.exact);
                 return (
                   <NavLink
                     key={item.to}
                     to={item.to}
-                    end={item.exact}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
-                        isActive
-                          ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-600/30'
-                          : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
-                      }`
-                    }
+                    className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+                      active
+                        ? 'bg-[#6B1724] text-white font-bold shadow-sm border-l-4 border-[#2E7D32]'
+                        : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
+                    } ${item.highlight && !active ? 'text-amber-300 hover:text-amber-200' : ''}`}
                   >
-                    <Icon className="w-4 h-4 shrink-0" />
-                    <span>{item.label}</span>
+                    <div className="flex items-center gap-2.5">
+                      <Icon className={`w-4 h-4 shrink-0 ${item.highlight ? 'text-amber-400' : ''}`} />
+                      <span>{item.label}</span>
+                    </div>
+                    {item.highlight && (
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-600 text-white font-bold uppercase tracking-wider">
+                        Accounts
+                      </span>
+                    )}
                   </NavLink>
                 );
               })}
@@ -129,15 +179,15 @@ export const DesktopSidebar: React.FC = () => {
         <div className="bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/60">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-white">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Milk & More Books Active</span>
+            <span>Dairy Business Engine</span>
           </div>
-          <p className="text-[10px] text-slate-400 mt-0.5">Automated dairy accounts & real-time Atlas sync.</p>
+          <p className="text-[10px] text-slate-400 mt-0.5">Real-time ledger & automated milk billing.</p>
           <NavLink
-            to="/financials"
-            className="mt-2 w-full flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px] py-1.5 rounded-lg transition-colors shadow-xs"
+            to="/accounts"
+            className="mt-2 w-full flex items-center justify-center gap-1.5 bg-[#6B1724] hover:bg-[#52121b] border border-maroon-700 text-white font-bold text-[11px] py-1.5 rounded-lg transition-colors shadow-xs"
           >
-            <Scale className="w-3.5 h-3.5" />
-            Open Day & Cash Books
+            <Calculator className="w-3.5 h-3.5 text-amber-300" />
+            Customer Accounts & Ledger
           </NavLink>
         </div>
       </div>

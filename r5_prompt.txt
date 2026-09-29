@@ -1,0 +1,888 @@
+<USER_REQUEST>
+# MILK & MORE — FINAL ACCOUNTING MODULE REPLACEMENT
+
+## IMPORTANT: MODIFY ONLY THE ACCOUNTING MODULE
+
+The existing Milk & More application is already visually good and functional.
+
+**Do NOT redesign the application.**
+
+The current dashboard, colors, header, sidebar, dairy operations, customer management, products, daily delivery, QR system, inventory, purchases, suppliers, authentication, roles, customer portal, voice features, GPS, reports, settings, mobile responsiveness, and all other existing functionality must remain exactly as they are.
+
+### ONLY REPLACE THE EXISTING ACCOUNTING / HISAAB MODULE.
+
+The current accounting module was previously implemented, but its accounting structure and presentation are not what is required.
+
+Replace that existing accounting implementation with a **professional iRujul-inspired business accounting workflow**, using the provided `reference-irujul/` screenshots and video as the design and workflow reference.
+
+---
+
+# 1. DO NOT TOUCH THE CURRENT VISUAL DESIGN
+
+The current Milk & More visual design is already good.
+
+KEEP:
+
+* Current maroon/burgundy color
+* Current dairy green color
+* Current dark sidebar
+* Current header
+* Current dashboard
+* Current typography style
+* Current buttons
+* Current overall application layout
+* Current Milk & More branding
+* Current navigation structure
+* Current responsive behavior
+
+Do NOT introduce a completely new UI style.
+
+Do NOT redesign the dashboard.
+
+Do NOT redesign the entire application.
+
+The existing visual language should remain the foundation.
+
+---
+
+# 2. ONLY ACCOUNTING SHOULD CHANGE
+
+The following accounting-related areas may be redesigned/reworked:
+
+* Customer Accounts
+* Customer Ledger
+* Payment Register
+* Bills & Statements
+* Customer Statements
+* Outstanding balances
+* Collection records
+* Accounting reports
+* Accounting filters
+* Accounting transaction screens
+* Accounting forms
+* Accounting tables
+
+Everything outside these accounting areas must remain unchanged.
+
+---
+
+# 3. USE ENGLISH THROUGHOUT THE ACCOUNTING MODULE
+
+All visible accounting terminology must be professional English.
+
+There must be NO Hindi/Hinglish accounting labels in the UI.
+
+Do not display:
+
+* Hisaab
+* Customer Hisaab
+* Khata
+* Baaki
+* Jama
+* Jama Rashi
+* Udhaar
+* Hisab Dekhein
+* Payment Jama
+
+Use:
+
+* Customer Accounts
+* Customer Ledger
+* Account Statement
+* Outstanding Balance
+* Opening Balance
+* Closing Balance
+* Current Balance
+* Payment Received
+* Record Payment
+* Transaction History
+* Account Summary
+* Collections
+* Charges
+* Payments
+* Customer Statement
+* Payment Register
+* Bills & Statements
+* Outstanding Report
+* Collection Report
+
+The accounting experience should look and read like professional English business software.
+
+---
+
+# 4. USE THE PROVIDED iRUJUL REFERENCE
+
+Inspect the complete `reference-irujul/` folder before implementation.
+
+It contains the supplied screenshots and reference video.
+
+Study the reference for:
+
+* Accounting workflow
+* Customer ledger structure
+* Transaction presentation
+* Payment workflow
+* Business tables
+* Search/filter arrangement
+* Date-range filtering
+* Account summaries
+* Customer master/account relationship
+* Reports
+* Forms
+* Compact business UI
+* Navigation hierarchy
+* Information density
+* Business-software interaction patterns
+
+### IMPORTANT
+
+Do NOT copy iRujul branding.
+
+Do NOT use the iRujul logo.
+
+Do NOT use the iRujul name inside Milk & More.
+
+Do NOT make a pixel-for-pixel clone.
+
+Use the reference as inspiration for the **accounting workflow, structure, information hierarchy and professional business-software behavior**.
+
+The result must remain clearly branded as **Milk & More**.
+
+---
+
+# 5. ACCOUNTING SHOULD FEEL LIKE PROFESSIONAL BUSINESS SOFTWARE
+
+The accounting area should be:
+
+* Professional
+* Structured
+* Compact
+* Data-focused
+* Table-driven
+* Easy to operate
+* Suitable for daily dairy business
+* Clear for owners and staff
+* Efficient for large customer lists
+* Efficient for large transaction histories
+
+Avoid excessive:
+
+* Large decorative cards
+* Empty whitespace
+* Fancy animations
+* Consumer-fintech styling
+* Oversized typography
+* Unnecessary gradients
+* Excessive rounded containers
+
+The accounting module should feel like a serious business management system.
+
+---
+
+# 6. CUSTOMER ACCOUNTS
+
+Replace the current Hisaab experience with:
+
+## Customer Accounts
+
+This is the main customer accounting area.
+
+The workflow should be:
+
+**Customer → Deliveries / Charges → Payments → Balance → Statement**
+
+The screen should show a professional customer account/master table.
+
+Recommended columns:
+
+| Customer | Mobile | Opening Balance | Total Charges | Total Payments | Outstanding Balance | Last Transaction | Status | Actions |
+
+Actions:
+
+* View Account
+* View Statement
+* Add Delivery
+* Record Payment
+* Edit Customer
+* Delete Customer
+
+---
+
+# 7. CUSTOMER ACCOUNT DETAIL
+
+When opening a customer account, show a professional account detail screen.
+
+Header:
+
+**Customer Account**
+
+Customer information:
+
+* Customer Name
+* Mobile Number
+* Address
+* Customer Since
+* Account Status
+
+Quick actions:
+
+* Add Delivery
+* Record Payment
+* View Statement
+* Print Statement
+* Edit Customer
+* Delete Customer
+
+---
+
+# 8. ACCOUNT SUMMARY
+
+Show a compact professional summary containing:
+
+* Opening Balance
+* Today's Charges
+* Total Deliveries
+* Total Charges
+* Total Payments
+* Previous Balance
+* Current Outstanding
+
+Do not make this unnecessarily large.
+
+The information should be immediately understandable.
+
+---
+
+# 9. CUSTOMER LEDGER
+
+Create a professional **Customer Ledger** similar to the business-accounting workflow visible in the iRujul reference.
+
+Use a dense table.
+
+Columns:
+
+| Date | Transaction Type | Description | Reference | Charges | Payment | Balance | Action |
+
+Possible transaction types:
+
+* Opening Balance
+* Milk Delivery
+* Dahi Delivery
+* Paneer Delivery
+* Ghee Delivery
+* Mattha Delivery
+* Other Product Delivery
+* Payment Received
+* Balance Adjustment
+
+The existing delivery and payment records must feed this ledger.
+
+Do not create duplicate independent transaction systems.
+
+---
+
+# 10. BALANCE CALCULATION
+
+Use simple dairy-business customer accounting.
+
+```text
+Opening Balance
++ Delivery / Charges
+- Payments
+= Current Outstanding
+```
+
+The same balance must be shown consistently across:
+
+* Customer Accounts
+* Customer Account Detail
+* Customer Ledger
+* Payment Register
+* Bills & Statements
+* Customer Statement
+* Existing dashboard accounting summaries
+
+There must be one reliable source of truth.
+
+---
+
+# 11. PAYMENT REGISTER
+
+Replace the existing basic Payment Register presentation with a professional business-software-style Payment Register.
+
+Header:
+
+**Payment Register**
+
+Subtitle:
+
+**Manage customer payments and collections**
+
+Primary action:
+
+**+ Record Payment**
+
+Show useful summary values:
+
+* Total Collections
+* Cash Collections
+* UPI Collections
+* Bank Collections
+* Total Payments
+
+---
+
+# 12. PAYMENT FILTERS
+
+Use a professional filter bar similar to the reference.
+
+Filters:
+
+* Search Customer
+* Customer
+* Payment Mode
+* Date From
+* Date To
+* Search
+* Reset
+
+Payment modes:
+
+* Cash
+* UPI
+* Bank Transfer
+
+Filters must work against real MongoDB data.
+
+---
+
+# 13. PAYMENT TABLE
+
+Use a compact professional table.
+
+Columns:
+
+| # | Date & Time | Customer | Mobile | Payment Mode | Reference / Note | Amount | Balance After Payment | Action |
+
+Actions:
+
+* View
+* Edit
+* Delete
+
+Keep the table compact and readable.
+
+---
+
+# 14. RECORD PAYMENT
+
+The payment form should look like professional business software.
+
+Fields:
+
+* Customer
+* Payment Date
+* Amount
+* Payment Mode
+* Reference Number
+* Notes
+
+Display:
+
+**Current Outstanding Balance**
+
+before recording the payment.
+
+After saving:
+
+* Payment record is created
+* Customer balance is recalculated
+* Customer ledger updates
+* Statement updates
+* Payment Register updates
+* Outstanding updates
+
+Do not create duplicate payment entries.
+
+---
+
+# 15. CUSTOMER STATEMENT
+
+Create a professional:
+
+## Customer Statement
+
+Header information:
+
+* Customer Name
+* Mobile
+* Address
+* Customer Since
+* Statement Period
+
+Summary:
+
+* Opening Balance
+* Total Charges
+* Total Payments
+* Closing Balance
+
+Transaction table:
+
+| Date | Description | Charges | Payment | Balance |
+
+Actions:
+
+* Print
+* Download PDF
+* Export
+* Share / WhatsApp where already supported
+
+Use clean A4-friendly formatting.
+
+---
+
+# 16. BILLS & STATEMENTS
+
+Keep the existing Bills & Statements functionality.
+
+Only improve its accounting presentation and connect it properly to the new Customer Accounts workflow.
+
+Do NOT remove existing billing functionality.
+
+Customer selection should continue supporting:
+
+* View Customer Details
+* Edit Customer
+* Delete Customer
+
+Use the existing customer services/backend.
+
+---
+
+# 17. OUTSTANDING REPORT
+
+Create a professional accounting report:
+
+## Customer Outstanding Report
+
+Columns:
+
+| Customer | Mobile | Total Charges | Total Payments | Outstanding Balance |
+
+Filters:
+
+* Search
+* Customer
+* Date Range
+* Outstanding Only
+* Active / Inactive
+* Reset
+
+Actions:
+
+* View Account
+* View Statement
+* Print
+* Export CSV
+
+---
+
+# 18. COLLECTION REPORT
+
+Create:
+
+## Collection Report
+
+Columns:
+
+| Date | Customer | Payment Mode | Reference | Amount |
+
+Filters:
+
+* Date From
+* Date To
+* Customer
+* Payment Mode
+
+Summary:
+
+* Cash
+* UPI
+* Bank Transfer
+* Total Collection
+
+Actions:
+
+* Print
+* Export CSV
+
+---
+
+# 19. DAILY COLLECTION SUMMARY
+
+Provide a professional daily collection view:
+
+* Cash Collection
+* UPI Collection
+* Bank Collection
+* Total Collection
+* Number of Payments
+
+This should be accounting/reporting functionality only.
+
+Do not redesign the main dashboard.
+
+---
+
+# 20. A–Z FILTER
+
+Keep the existing A–Z customer filtering functionality.
+
+It should work within accounting screens such as:
+
+* Customer Accounts
+* Customer Ledger
+* Payment Register
+* Customer selection
+
+It must filter actual customers.
+
+---
+
+# 21. SEARCH AND FILTER EXPERIENCE
+
+Accounting screens should support practical business filtering.
+
+Use:
+
+* Search
+* Customer filter
+* Date range
+* Transaction type
+* Payment mode
+* Active/Inactive
+* Outstanding-only
+
+Provide:
+
+**Reset**
+
+to clear filters.
+
+The filter bar should be compact and professionally arranged.
+
+---
+
+# 22. TRANSACTION EDITING
+
+Accounting transactions must remain editable where the existing business rules permit it.
+
+If a delivery was accidentally recorded:
+
+* Allow authorized user to edit it
+* Recalculate amount
+* Recalculate customer balance
+* Update ledger
+* Preserve history correctly
+
+If a payment was entered incorrectly:
+
+* Allow authorized user to edit it
+* Recalculate customer balance
+* Update ledger
+* Update statements
+
+Do not permanently block legitimate corrections.
+
+---
+
+# 23. EXISTING DELIVERY PROTECTION MUST REMAIN
+
+Do NOT change the existing duplicate-delivery protection.
+
+If a customer already received today's delivery:
+
+**Today's delivery already recorded.**
+
+must still appear.
+
+Do not subtract stock twice.
+
+If a genuine additional delivery is required:
+
+**Add Another Delivery**
+
+must remain available.
+
+Additional delivery records must remain editable.
+
+This functionality must not be broken by the accounting replacement.
+
+---
+
+# 24. DATABASE
+
+MongoDB Atlas remains the primary database.
+
+Do NOT:
+
+* Reset MongoDB
+* Delete existing records
+* Replace MongoDB
+* Introduce Supabase
+* Introduce PostgreSQL
+* Introduce Firebase
+* Create a second accounting database
+
+Reuse the existing MongoDB/Mongoose models and services wherever possible.
+
+---
+
+# 25. EXISTING DATA
+
+Existing customers, deliveries and payments must continue appearing correctly.
+
+Do not replace real records with fake demo data.
+
+Existing:
+
+* Customers
+* Deliveries
+* Payments
+* Product records
+* Customer history
+* Balances
+
+must remain intact.
+
+---
+
+# 26. DO NOT BUILD DOUBLE-ENTRY ACCOUNTING
+
+This is extremely important.
+
+Do NOT add:
+
+* Chart of Accounts
+* Journal Entries
+* Trial Balance
+* General Ledger accounting system
+* Complex vouchers
+* Debit/Credit account hierarchy
+* Full enterprise accounting ERP
+* Vyapar clone
+
+The required system is:
+
+**Professional Dairy Customer Accounts & Collection Management**
+
+with an iRujul-inspired business workflow.
+
+---
+
+# 27. CUSTOMER / PRODUCT DELETE
+
+Keep the existing safe-delete behavior.
+
+Customer confirmation:
+
+**Are you sure you want to delete this customer?**
+
+Buttons:
+
+**Cancel | Delete**
+
+Product confirmation:
+
+**Are you sure you want to delete this product?**
+
+Buttons:
+
+**Cancel | Delete**
+
+Historical records must remain safe.
+
+---
+
+# 28. RESPONSIVE ACCOUNTING
+
+The accounting module must work properly on:
+
+* Desktop
+* Laptop
+* Android Chrome
+* iPhone Safari
+
+Desktop should retain the compact business-software table experience.
+
+On mobile:
+
+* Tables can horizontally scroll where necessary
+* Forms must stack
+* Important fields must remain accessible
+* Buttons must remain touch-friendly
+* No page-wide horizontal overflow
+
+---
+
+# 29. PERFORMANCE
+
+Do not load thousands of accounting records unnecessarily.
+
+Use:
+
+* Pagination
+* Efficient MongoDB queries
+* Server-side filtering where appropriate
+* Debounced search
+* Proper indexes
+* Aggregation where appropriate
+
+The system must remain responsive with a large customer and transaction database.
+
+---
+
+# 30. ROLE PERMISSIONS
+
+Preserve existing role permissions:
+
+* OWNER
+* ADMIN
+* STAFF
+* MILKMAN
+
+Accounting actions must respect the existing authorization system.
+
+Do not weaken security.
+
+---
+
+# 31. MOBILE AND DESKTOP CONSISTENCY
+
+The accounting module should use the same Milk & More components and design system already present in the application.
+
+Do not create an unrelated visual theme.
+
+The only difference should be that accounting becomes significantly more professional and iRujul-inspired in its workflow and information structure.
+
+---
+
+# 32. FINAL TERMINOLOGY CHECK
+
+Before completion, search the accounting UI/code for informal accounting labels.
+
+Remove accounting-related visible occurrences of:
+
+* Hisaab
+* Khata
+* Baaki
+* Jama
+* Udhaar
+
+Replace them with professional English equivalents.
+
+The accounting UI must consistently use English.
+
+---
+
+# 33. REGRESSION CHECK
+
+After implementation, verify that these existing modules still work:
+
+* Dashboard
+* Customers
+* Products
+* Daily Delivery
+* QR Management
+* QR Scanner
+* Inventory
+* Purchases
+* Suppliers
+* Payments
+* Bills & Statements
+* Reports
+* Settings
+* Authentication
+* Roles
+* Customer Portal
+* Voice
+* GPS
+* Mobile layout
+
+Do not modify these modules unnecessarily.
+
+---
+
+# 34. FINAL ACCOUNTING SCREENS
+
+The final accounting implementation should contain professional versions of:
+
+1. Customer Accounts
+2. Customer Account Detail
+3. Customer Ledger
+4. Payment Register
+5. Record Payment
+6. Payment Detail
+7. Bills & Statements
+8. Customer Statement
+9. Customer Outstanding Report
+10. Collection Report
+11. Daily Collection Summary
+
+---
+
+# 35. FINAL DESIGN REQUIREMENT
+
+The final result must look like:
+
+**Milk & More + Current Existing Design + Current Maroon/Green Colors + iRujul-Inspired Professional Accounting Workflow**
+
+NOT:
+
+* A completely redesigned Milk & More
+* A generic modern dashboard
+* A Hindi Hisaab application
+* A basic payment list
+* A Vyapar clone
+* A copy of iRujul
+
+The current application is already good.
+
+**Only upgrade and replace the accounting experience.**
+
+---
+
+# 36. FINAL IMPLEMENTATION INSTRUCTION
+
+Before changing anything:
+
+1. Inspect the existing Milk & More application.
+2. Identify exactly which components/pages belong to the existing accounting/Hisaab implementation.
+3. Inspect all `reference-irujul/` reference material.
+4. Keep the existing global UI untouched.
+5. Replace only the accounting implementation.
+6. Reuse existing backend services and MongoDB data wherever possible.
+7. Keep all existing features working.
+8. Use professional English terminology everywhere in accounting.
+9. Make the accounting workflow and table structure strongly inspired by the supplied iRujul reference.
+10. Run tests and production build.
+11. Perform actual browser/runtime verification.
+12. Confirm that unrelated pages were not redesigned.
+
+### FINAL RULE:
+
+**DO NOT TOUCH WHAT IS ALREADY GOOD.**
+
+**KEEP THE CURRENT COLORS.**
+
+**KEEP THE CURRENT DASHBOARD.**
+
+**KEEP THE CURRENT APPLICATION STRUCTURE.**
+
+**ONLY REPLACE THE ACCOUNTING/HISAAB MODULE WITH A PROFESSIONAL ENGLISH iRUJUL-INSPIRED ACCOUNTING EXPERIENCE.**
+
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-09-19T00:24:22+05:30.
+</ADDITIONAL_METADATA>

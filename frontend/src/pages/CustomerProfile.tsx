@@ -25,6 +25,8 @@ import {
   RotateCcw,
   UserCog,
   UserX,
+  RefreshCw,
+  ShieldAlert,
   X,
 } from 'lucide-react';
 import { DeliveryModal } from '../components/DeliveryModal';
@@ -59,6 +61,12 @@ export const CustomerProfile: React.FC = () => {
   const [deactivating, setDeactivating] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // QR token management states
+  const [isRegenerateQrOpen, setIsRegenerateQrOpen] = useState(false);
+  const [regeneratingQr, setRegeneratingQr] = useState(false);
+  const [isRevokeQrOpen, setIsRevokeQrOpen] = useState(false);
+  const [revokingQr, setRevokingQr] = useState(false);
 
   // Active Tab
   const [activeTab, setActiveTab] = useState<'DELIVERIES' | 'PAYMENTS'>('DELIVERIES');
@@ -111,6 +119,40 @@ export const CustomerProfile: React.FC = () => {
       setIsDeleteOpen(false);
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleConfirmRegenerateQr = async () => {
+    if (!customer) return;
+    try {
+      setRegeneratingQr(true);
+      const res = await api.regenerateCustomerQr(customer.id);
+      if (res.success) {
+        showToast('New QR code generated successfully. Old QR and sessions invalidated.', 'success');
+        setIsRegenerateQrOpen(false);
+        loadCustomerData();
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Failed to regenerate QR code', 'error');
+    } finally {
+      setRegeneratingQr(false);
+    }
+  };
+
+  const handleConfirmRevokeQr = async () => {
+    if (!customer) return;
+    try {
+      setRevokingQr(true);
+      const res = await api.revokeCustomerQr(customer.id);
+      if (res.success) {
+        showToast('Customer QR portal access revoked. Old sessions invalidated.', 'success');
+        setIsRevokeQrOpen(false);
+        loadCustomerData();
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Failed to revoke QR code', 'error');
+    } finally {
+      setRevokingQr(false);
     }
   };
 
@@ -283,13 +325,31 @@ export const CustomerProfile: React.FC = () => {
               </button>
             )}
             {isOwnerOrAdmin && (
-              <button
-                onClick={() => setIsDeleteOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-xs rounded-xl border border-rose-200 transition-colors"
-              >
-                <Trash2 className="w-4 h-4 text-rose-600" />
-                Delete
-              </button>
+              <>
+                <button
+                  onClick={() => setIsRegenerateQrOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs rounded-xl border border-indigo-200 transition-colors"
+                  title="Generate a new secure QR token"
+                >
+                  <RefreshCw className="w-4 h-4 text-indigo-600" />
+                  Regenerate QR
+                </button>
+                <button
+                  onClick={() => setIsRevokeQrOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-xs rounded-xl border border-amber-200 transition-colors"
+                  title="Revoke QR access"
+                >
+                  <ShieldAlert className="w-4 h-4 text-amber-600" />
+                  Revoke QR
+                </button>
+                <button
+                  onClick={() => setIsDeleteOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-xs rounded-xl border border-rose-200 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4 text-rose-600" />
+                  Delete
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -770,6 +830,126 @@ export const CustomerProfile: React.FC = () => {
                   </>
                 ) : (
                   'Delete'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Regenerate QR Confirmation Modal */}
+      {isRegenerateQrOpen && customer && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-5 space-y-4 border border-slate-200 shadow-2xl animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
+                  <RefreshCw className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm">Regenerate QR Code</h3>
+                  <p className="text-[11px] text-slate-500">{customer.name}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsRegenerateQrOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:bg-slate-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2 text-xs text-slate-600 leading-relaxed">
+              <p>
+                Generating a new QR code will <strong>immediately invalidate the old QR tag</strong> and terminate all active customer portal sessions.
+              </p>
+              <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-indigo-900 text-[11px]">
+                <p className="font-semibold">Important note:</p>
+                <p>Deliveries, payment history, and account balances will NOT be modified or deleted.</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsRegenerateQrOpen(false)}
+                className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmRegenerateQr}
+                disabled={regeneratingQr}
+                className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
+              >
+                {regeneratingQr ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Regenerating...
+                  </>
+                ) : (
+                  'Regenerate QR'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Revoke QR Confirmation Modal */}
+      {isRevokeQrOpen && customer && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-5 space-y-4 border border-slate-200 shadow-2xl animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
+                  <ShieldAlert className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm">Revoke QR Code Access</h3>
+                  <p className="text-[11px] text-slate-500">{customer.name}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsRevokeQrOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:bg-slate-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2 text-xs text-slate-600 leading-relaxed">
+              <p>
+                Revoking will <strong>disable customer portal access</strong> from the printed QR code until a new one is regenerated.
+              </p>
+              <div className="p-3 bg-amber-50 border border-amber-100 rounded-xl text-amber-900 text-[11px]">
+                <p className="font-semibold">Preserved data:</p>
+                <p>All recorded deliveries, customer payments, and outstanding balances remain completely intact.</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsRevokeQrOpen(false)}
+                className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmRevokeQr}
+                disabled={revokingQr}
+                className="flex-1 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-xs flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
+              >
+                {revokingQr ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Revoking...
+                  </>
+                ) : (
+                  'Revoke QR Access'
                 )}
               </button>
             </div>

@@ -10,6 +10,12 @@ import { AppError } from '../middleware/errorHandler';
 import { getTodayDateString } from '../utils/date';
 import { Types } from 'mongoose';
 import { postJournalEntry, CHART_OF_ACCOUNTS } from '../services/accountingService';
+import { refundCustomerCredit } from '../services/paymentService';
+import {
+  ensureCustomerPortalToken,
+  regenerateCustomerPortalToken,
+  revokeCustomerPortalToken,
+} from '../services/customerPortalService';
 
 export const getCustomers = async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.user) throw new AppError('Unauthorized', 401);
@@ -81,8 +87,11 @@ export const getCustomers = async (req: AuthRequest, res: Response): Promise<voi
     customer_since: c.customerSince?.toISOString().split('T')[0],
     service_end_date: c.serviceEndDate?.toISOString().split('T')[0] || null,
     opening_balance: c.openingBalance,
+    opening_balance_type: c.openingBalanceType || 'DUE',
     qr_token: c.assignedQr || '',
     assigned_qr: c.assignedQr || '',
+    customerPortalToken: c.customerPortalToken || '',
+    portalTokenRevoked: Boolean(c.portalTokenRevoked),
     delivery_schedule: c.deliverySchedule,
     scheduled_products: c.scheduledProducts,
     location: c.location,
@@ -109,6 +118,11 @@ export const getCustomerById = async (req: AuthRequest, res: Response): Promise<
 
   if (!customer) {
     throw new AppError('Customer not found.', 404);
+  }
+
+  // Ensure customer has a secure portal token
+  if (!customer.customerPortalToken) {
+    await ensureCustomerPortalToken(customer);
   }
 
   const todayStr = getTodayDateString();
@@ -141,8 +155,11 @@ export const getCustomerById = async (req: AuthRequest, res: Response): Promise<
       customer_since: customer.customerSince?.toISOString().split('T')[0],
       service_end_date: customer.serviceEndDate?.toISOString().split('T')[0] || null,
       opening_balance: customer.openingBalance,
+      opening_balance_type: customer.openingBalanceType || 'DUE',
       qr_token: customer.assignedQr || '',
       assigned_qr: customer.assignedQr || '',
+      customerPortalToken: customer.customerPortalToken || '',
+      portalTokenRevoked: Boolean(customer.portalTokenRevoked),
       delivery_schedule: customer.deliverySchedule,
       scheduled_products: customer.scheduledProducts,
       location: customer.location,
@@ -196,6 +213,8 @@ export const createCustomer = async (req: AuthRequest, res: Response): Promise<v
     notes,
     opening_balance,
     openingBalance,
+    opening_balance_type,
+    openingBalanceType,
     delivery_schedule,
     deliverySchedule,
     scheduled_products,
@@ -211,6 +230,12 @@ export const createCustomer = async (req: AuthRequest, res: Response): Promise<v
   if (!name || !mobile) {
     throw new AppError('Customer name and mobile number are required.', 400);
   }
+
+  const rawOpBal = Number(opening_balance ?? openingBalance ?? 0);
+  const rawOpType = String(opening_balance_type || openingBalanceType || '').toUpperCase();
+  const isAdvance = rawOpType === 'ADVANCE' || rawOpBal < 0;
+  const opBal = Math.abs(rawOpBal);
+  const opType: 'DUE' | 'ADVANCE' = isAdvance ? 'ADVANCE' : 'DUE';
 
   const requestedQr = assigned_qr || assignedQr || qr_token;
 
@@ -236,7 +261,8 @@ export const createCustomer = async (req: AuthRequest, res: Response): Promise<v
     serviceEndDate: service_end_date || serviceEndDate ? new Date(service_end_date || serviceEndDate) : undefined,
     status: 'ACTIVE',
     notes: notes?.trim() || '',
-    openingBalance: Number(opening_balance ?? openingBalance ?? 0),
+    openingBalance: opBal,
+    openingBalanceType: opType,
     deliverySchedule: delivery_schedule || deliverySchedule || 'MORNING',
     scheduledProducts: scheduled_products || scheduledProducts || [],
     location: geoLoc,
@@ -274,64 +300,64 @@ export const createCustomer = async (req: AuthRequest, res: Response): Promise<v
   }
 
   // Post opening balance double-entry journal if openingBalance is non-zero
-  const opBal = Number(customer.openingBalance || 0);
   if (opBal > 0) {
-    await postJournalEntry({
-      businessId: req.user.business_id,
-      entryDate: getTodayDateString(),
-      entryType: 'OPENING_BALANCE',
-      referenceType: 'CUSTOMER_OPENING',
-      referenceId: customer._id.toString(),
-      narration: `Opening balance for customer ${customer.name}`,
-      lines: [
-        {
-          accountCode: CHART_OF_ACCOUNTS.CUSTOMER_RECEIVABLES.code,
-          accountName: CHART_OF_ACCOUNTS.CUSTOMER_RECEIVABLES.name,
-          accountType: 'ASSET',
-          debit: opBal,
-          credit: 0,
-          partyType: 'CUSTOMER',
-          partyId: customer._id,
-          partyName: customer.name,
-        },
-        {
-          accountCode: CHART_OF_ACCOUNTS.OPENING_EQUITY.code,
-          accountName: CHART_OF_ACCOUNTS.OPENING_EQUITY.name,
-          accountType: 'EQUITY',
-          debit: 0,
-          credit: opBal,
-        },
-      ],
-    });
-  } else if (opBal < 0) {
-    const absBal = Math.abs(opBal);
-    await postJournalEntry({
-      businessId: req.user.business_id,
-      entryDate: getTodayDateString(),
-      entryType: 'OPENING_BALANCE',
-      referenceType: 'CUSTOMER_OPENING',
-      referenceId: customer._id.toString(),
-      narration: `Opening advance for customer ${customer.name}`,
-      lines: [
-        {
-          accountCode: CHART_OF_ACCOUNTS.OPENING_EQUITY.code,
-          accountName: CHART_OF_ACCOUNTS.OPENING_EQUITY.name,
-          accountType: 'EQUITY',
-          debit: absBal,
-          credit: 0,
-        },
-        {
-          accountCode: CHART_OF_ACCOUNTS.CUSTOMER_RECEIVABLES.code,
-          accountName: CHART_OF_ACCOUNTS.CUSTOMER_RECEIVABLES.name,
-          accountType: 'ASSET',
-          debit: 0,
-          credit: absBal,
-          partyType: 'CUSTOMER',
-          partyId: customer._id,
-          partyName: customer.name,
-        },
-      ],
-    });
+    if (opType === 'ADVANCE') {
+      await postJournalEntry({
+        businessId: req.user.business_id,
+        entryDate: getTodayDateString(),
+        entryType: 'OPENING_BALANCE',
+        referenceType: 'CUSTOMER_OPENING',
+        referenceId: customer._id.toString(),
+        narration: `Opening advance credit for customer ${customer.name}`,
+        lines: [
+          {
+            accountCode: CHART_OF_ACCOUNTS.OPENING_EQUITY.code,
+            accountName: CHART_OF_ACCOUNTS.OPENING_EQUITY.name,
+            accountType: 'EQUITY',
+            debit: opBal,
+            credit: 0,
+          },
+          {
+            accountCode: CHART_OF_ACCOUNTS.CUSTOMER_ADVANCES.code,
+            accountName: CHART_OF_ACCOUNTS.CUSTOMER_ADVANCES.name,
+            accountType: 'LIABILITY',
+            debit: 0,
+            credit: opBal,
+            partyType: 'CUSTOMER',
+            partyId: customer._id,
+            partyName: customer.name,
+          },
+        ],
+      });
+    } else {
+      await postJournalEntry({
+        businessId: req.user.business_id,
+        entryDate: getTodayDateString(),
+        entryType: 'OPENING_BALANCE',
+        referenceType: 'CUSTOMER_OPENING',
+        referenceId: customer._id.toString(),
+        narration: `Opening balance for customer ${customer.name}`,
+        lines: [
+          {
+            accountCode: CHART_OF_ACCOUNTS.CUSTOMER_RECEIVABLES.code,
+            accountName: CHART_OF_ACCOUNTS.CUSTOMER_RECEIVABLES.name,
+            accountType: 'ASSET',
+            debit: opBal,
+            credit: 0,
+            partyType: 'CUSTOMER',
+            partyId: customer._id,
+            partyName: customer.name,
+          },
+          {
+            accountCode: CHART_OF_ACCOUNTS.OPENING_EQUITY.code,
+            accountName: CHART_OF_ACCOUNTS.OPENING_EQUITY.name,
+            accountType: 'EQUITY',
+            debit: 0,
+            credit: opBal,
+          },
+        ],
+      });
+    }
   }
 
   await logAudit(
@@ -611,5 +637,49 @@ export const deleteCustomer = async (req: AuthRequest, res: Response): Promise<v
   res.json({
     success: true,
     message: `Customer "${customer.name}" deleted successfully.`,
+  });
+};
+
+export const regenerateCustomerQr = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.user) throw new AppError('Unauthorized', 401);
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const newToken = await regenerateCustomerPortalToken(id, req.user.business_id);
+  res.json({
+    success: true,
+    message: 'Customer QR code regenerated successfully. Old QR access has been invalidated.',
+    data: {
+      customerPortalToken: newToken,
+    },
+  });
+};
+
+export const revokeCustomerQr = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.user) throw new AppError('Unauthorized', 401);
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  await revokeCustomerPortalToken(id, req.user.business_id);
+  res.json({
+    success: true,
+    message: 'Customer QR code revoked successfully.',
+  });
+};
+
+export const refundCustomerCreditHandler = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.user) throw new AppError('Unauthorized', 401);
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const { amount, paymentMode, paymentDate, referenceNumber, notes } = req.body;
+
+  const refund = await refundCustomerCredit(req.user.business_id, req.user.id, {
+    customerId: id,
+    amount: Number(amount),
+    paymentMode,
+    paymentDate,
+    referenceNumber,
+    notes,
+  });
+
+  res.status(201).json({
+    success: true,
+    message: 'Customer credit refunded successfully.',
+    data: refund,
   });
 };

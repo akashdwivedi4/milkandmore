@@ -29,7 +29,10 @@ export const Products: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
+  const [selectedLetter, setSelectedLetter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+
+  const alphabets = ['ALL', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')];
 
   // Add/Edit Product Modal State
   const [isModalOpen, setIsModalOpen] = useState(searchParams.get('action') === 'add');
@@ -193,32 +196,39 @@ export const Products: React.FC = () => {
     }
   };
 
+  const displayedProducts = products.filter((p) => {
+    if (selectedLetter !== 'ALL') {
+      return (p.name || '').trim().toUpperCase().startsWith(selectedLetter);
+    }
+    return true;
+  });
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-            Products & Inventory
+            Products & Item Master
           </h2>
           <p className="text-xs text-slate-500">
-            Catalog rates, base units, and real-time inventory management
+            Catalog rates, base units, live dairy inventory and custom customer pricing
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={() => navigate('/customer-rates')}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors border border-slate-200"
           >
-            <Percent className="w-4 h-4 text-brand-600" />
+            <Percent className="w-3.5 h-3.5 text-[#6B1724]" />
             Customer Rates Matrix
           </button>
 
           {isOwnerOrAdmin && (
             <button
               onClick={openAdd}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold rounded-xl shadow-md shadow-brand-500/25 transition-all"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#2E7D32] hover:bg-[#256629] text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-700/20 transition-all"
             >
               <Plus className="w-4 h-4" />
               Add Product
@@ -228,197 +238,299 @@ export const Products: React.FC = () => {
       </div>
 
       {/* Filters & Search */}
-      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between bg-white p-3 rounded-2xl border border-slate-200">
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search products by name..."
-            className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
+      <div className="bg-white p-3 sm:p-4 rounded-xl border border-slate-200 shadow-xs space-y-3">
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search products by name..."
+              className="w-full pl-9 pr-8 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2E7D32]"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg self-start sm:self-auto">
+            {(['ALL', 'ACTIVE', 'INACTIVE'] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setStatusFilter(tab)}
+                className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${
+                  statusFilter === tab
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                {tab === 'ALL' ? 'All Products' : tab === 'ACTIVE' ? 'Active' : 'Inactive'}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl self-start sm:self-auto">
-          {(['ALL', 'ACTIVE', 'INACTIVE'] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setStatusFilter(tab)}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                statusFilter === tab
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              {tab === 'ALL' ? 'All Products' : tab === 'ACTIVE' ? 'Active' : 'Inactive'}
-            </button>
-          ))}
+        {/* iRujul A-Z Alphabet Filter Bar */}
+        <div className="pt-2 border-t border-slate-100 flex items-center gap-1 overflow-x-auto pb-1 select-none scrollbar-thin">
+          <span className="text-[10px] uppercase font-bold text-slate-400 mr-1 shrink-0">A-Z:</span>
+          {alphabets.map((letter) => {
+            const isSelected = selectedLetter === letter;
+            return (
+              <button
+                key={letter}
+                onClick={() => setSelectedLetter(letter)}
+                className={`min-w-[24px] h-6 px-1.5 flex items-center justify-center text-[11px] font-bold rounded transition-colors shrink-0 ${
+                  isSelected
+                    ? 'bg-[#6B1724] text-white shadow-xs'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                }`}
+              >
+                {letter}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Products Grid */}
+      {/* Products Presentation */}
       {loading ? (
         <div className="py-20 text-center text-slate-400">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2 text-brand-500" />
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2 text-[#2E7D32]" />
           <p className="text-xs font-semibold">Loading catalog...</p>
         </div>
-      ) : products.length === 0 ? (
-        <div className="p-12 text-center bg-white rounded-3xl border border-slate-200">
+      ) : displayedProducts.length === 0 ? (
+        <div className="p-12 text-center bg-white rounded-xl border border-slate-200">
           <Package className="w-12 h-12 mx-auto mb-3 text-slate-300" />
           <p className="text-sm font-bold text-slate-700">No products found</p>
           <p className="text-xs text-slate-400 mt-1">
-            {searchQuery || statusFilter !== 'ALL'
-              ? 'Try changing your search query or status filter.'
+            {searchQuery || selectedLetter !== 'ALL' || statusFilter !== 'ALL'
+              ? 'Try changing your search query or alphabet filter.'
               : 'Add your first product to start managing dairy inventory.'}
           </p>
-          {isOwnerOrAdmin && !searchQuery && statusFilter === 'ALL' && (
+          {isOwnerOrAdmin && !searchQuery && selectedLetter === 'ALL' && statusFilter === 'ALL' && (
             <button
               onClick={openAdd}
-              className="mt-4 px-4 py-2 bg-brand-600 text-white text-xs font-bold rounded-xl"
+              className="mt-4 px-4 py-2 bg-[#2E7D32] text-white text-xs font-bold rounded-xl"
             >
               Add First Product
             </button>
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {products.map((prod) => {
-            const isActive = prod.is_active !== false;
-            return (
-              <div
-                key={prod.id}
-                className={`bg-white rounded-2xl p-5 border transition-all flex flex-col justify-between space-y-4 shadow-xs ${
-                  isActive
-                    ? 'border-slate-200 hover:border-brand-200'
-                    : 'border-slate-200 bg-slate-50/60 opacity-80'
-                }`}
-              >
-                <div>
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2.5">
-                      <div
-                        className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold ${
-                          isActive
-                            ? 'bg-brand-50 text-brand-700'
-                            : 'bg-slate-200 text-slate-500'
-                        }`}
-                      >
-                        <Package className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <h3 className="font-bold text-base text-slate-900">{prod.name}</h3>
-                          <span
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                              isActive
-                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                : 'bg-slate-100 text-slate-600 border border-slate-300'
-                            }`}
-                          >
-                            {isActive ? 'Active' : 'Inactive'}
-                          </span>
+        <>
+          {/* Desktop Dense iRujul Item Master Table */}
+          <div className="hidden md:block bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-slate-100 text-slate-700 border-b border-slate-200 font-bold text-[11px] uppercase tracking-wider">
+                  <th className="py-2.5 px-3 w-12 text-center">#</th>
+                  <th className="py-2.5 px-3">Item / Product Name</th>
+                  <th className="py-2.5 px-3 text-center">Base Unit</th>
+                  <th className="py-2.5 px-3 text-right">Default Rate (₹)</th>
+                  <th className="py-2.5 px-3 text-right">Live Stock</th>
+                  <th className="py-2.5 px-3 text-center">Status</th>
+                  <th className="py-2.5 px-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 font-medium">
+                {displayedProducts.map((prod, idx) => {
+                  const isActive = prod.is_active !== false;
+                  const currentStock = prod.current_stock ?? 0;
+                  const isLow = currentStock <= 10;
+                  return (
+                    <tr key={prod.id} className="hover:bg-amber-50/40 transition-colors">
+                      <td className="py-2.5 px-3 text-center text-slate-400 font-mono text-[11px]">
+                        {idx + 1}
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <div className="font-bold text-slate-900 flex items-center gap-2">
+                          <div className="w-6 h-6 rounded bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center font-bold text-[11px] shrink-0">
+                            <Package className="w-3.5 h-3.5 text-slate-600" />
+                          </div>
+                          <span>{prod.name}</span>
                         </div>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          Base Unit:{' '}
-                          <strong className="text-slate-800 font-bold">{prod.base_unit}</strong>
-                        </p>
-                      </div>
-                    </div>
-
-                    {isOwnerOrAdmin && (
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => openEdit(prod)}
-                          className="p-1.5 text-slate-400 hover:text-brand-600 rounded-lg hover:bg-slate-100 transition-colors"
-                          title="Edit Product"
+                      </td>
+                      <td className="py-2.5 px-3 text-center">
+                        <span className="font-mono font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[11px]">
+                          {prod.base_unit}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900 text-[13px]">
+                        {formatCurrency(prod.default_rate)}
+                        <span className="text-[10px] font-normal text-slate-500 ml-0.5">/{prod.base_unit}</span>
+                      </td>
+                      <td className="py-2.5 px-3 text-right">
+                        <span
+                          className={`font-mono font-bold text-[12px] px-2 py-0.5 rounded ${
+                            isLow
+                              ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                              : 'text-slate-800'
+                          }`}
                         >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
+                          {currentStock} {prod.base_unit}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-center">
                         {isActive ? (
-                          <button
-                            onClick={() => setProductToDeactivate(prod)}
-                            className="p-1.5 text-slate-400 hover:text-amber-600 rounded-lg hover:bg-amber-50 transition-colors"
-                            title="Deactivate Product"
-                          >
-                            <Power className="w-3.5 h-3.5" />
-                          </button>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Active
+                          </span>
                         ) : (
-                          <button
-                            onClick={() => handleReactivate(prod)}
-                            className="p-1.5 text-slate-400 hover:text-emerald-600 rounded-lg hover:bg-emerald-50 transition-colors"
-                            title="Reactivate Product"
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                          </button>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-300 inline-flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Inactive
+                          </span>
                         )}
-                        <button
-                          onClick={() => setProductToDelete(prod)}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
-                          title="Delete Product"
+                      </td>
+                      <td className="py-2.5 px-3 text-right">
+                        {isOwnerOrAdmin && (
+                          <div className="inline-flex items-center gap-1">
+                            <button
+                              onClick={() => openEdit(prod)}
+                              className="p-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
+                              title="Edit Product"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            {isActive ? (
+                              <button
+                                onClick={() => setProductToDeactivate(prod)}
+                                className="p-1 rounded bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition-colors"
+                                title="Deactivate Product"
+                              >
+                                <Power className="w-3.5 h-3.5" />
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleReactivate(prod)}
+                                className="p-1 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition-colors"
+                                title="Reactivate Product"
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => setProductToDelete(prod)}
+                              className="p-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition-colors"
+                              title="Delete Product"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Cards (Screen < md) */}
+          <div className="md:hidden grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {displayedProducts.map((prod) => {
+              const isActive = prod.is_active !== false;
+              const currentStock = prod.current_stock ?? 0;
+              const isLow = currentStock <= 10;
+              return (
+                <div
+                  key={prod.id}
+                  className="bg-white rounded-xl p-4 border border-slate-200 transition-all flex flex-col justify-between space-y-3 shadow-xs"
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className={`w-9 h-9 rounded-lg flex items-center justify-center font-bold ${
+                            isActive
+                              ? 'bg-brand-50 text-brand-700'
+                              : 'bg-slate-200 text-slate-500'
+                          }`}
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                          <Package className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <h3 className="font-bold text-sm text-slate-900">{prod.name}</h3>
+                            <span
+                              className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full ${
+                                isActive
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                  : 'bg-slate-100 text-slate-600 border border-slate-300'
+                              }`}
+                            >
+                              {isActive ? 'Active' : 'Inactive'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 mt-0.5">
+                            Unit: <strong className="text-slate-800 font-bold">{prod.base_unit}</strong>
+                          </p>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                </div>
 
-                {/* Stats: Default Rate & Stock */}
-                <div className="pt-3 border-t border-slate-100 grid grid-cols-2 gap-2">
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-slate-400">
-                      Default Rate
-                    </span>
-                    <p className="text-base font-black text-slate-900 mt-0.5">
-                      {formatCurrency(prod.default_rate)}
-                      <span className="text-[11px] font-normal text-slate-500">
-                        /{prod.base_unit}
+                      {isOwnerOrAdmin && (
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => openEdit(prod)}
+                            className="p-1 text-slate-400 hover:text-brand-600 rounded"
+                            title="Edit"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          {isActive ? (
+                            <button
+                              onClick={() => setProductToDeactivate(prod)}
+                              className="p-1 text-slate-400 hover:text-amber-600 rounded"
+                              title="Deactivate"
+                            >
+                              <Power className="w-3.5 h-3.5" />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleReactivate(prod)}
+                              className="p-1 text-slate-400 hover:text-emerald-600 rounded"
+                              title="Reactivate"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => setProductToDelete(prod)}
+                            className="p-1 text-slate-400 hover:text-rose-600 rounded"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <span className="text-[9px] uppercase font-bold text-slate-400 block">Rate</span>
+                      <span className="font-bold text-slate-900 font-mono text-sm">
+                        {formatCurrency(prod.default_rate)}
+                        <span className="text-[10px] text-slate-500 font-normal">/{prod.base_unit}</span>
                       </span>
-                    </p>
-                  </div>
-
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-slate-400">
-                      Current Stock
-                    </span>
-                    <p
-                      className={`text-base font-black mt-0.5 ${
-                        prod.current_stock < 0
-                          ? 'text-rose-600'
-                          : prod.current_stock === 0
-                          ? 'text-slate-500'
-                          : 'text-emerald-700'
-                      }`}
-                    >
-                      {prod.current_stock} {prod.base_unit}
-                    </p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[9px] uppercase font-bold text-slate-400 block">Stock</span>
+                      <span className={`font-bold font-mono text-sm ${isLow ? 'text-rose-600' : 'text-slate-800'}`}>
+                        {currentStock} {prod.base_unit}
+                      </span>
+                    </div>
                   </div>
                 </div>
-
-                {/* Supported Units Tag */}
-                <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                  {prod.supported_units?.map((u) => (
-                    <span
-                      key={u.unit}
-                      className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600"
-                    >
-                      {u.unit} (×{u.factor})
-                    </span>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        </>
       )}
 
       {/* Add / Edit Modal */}

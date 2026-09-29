@@ -18,12 +18,22 @@ export const QrCardModal: React.FC<QrCardModalProps> = ({
 }) => {
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
 
-  useEffect(() => {
-    if (!isOpen || !customer.qr_token) return;
+  const portalToken =
+    customer.customerPortalToken ||
+    customer.customer_portal_token ||
+    customer.qr_token ||
+    customer.assigned_qr ||
+    customer.assignedQr ||
+    customer.id;
 
-    // Generate high-resolution QR code
+  const qrTargetValue = `${window.location.origin}/customer/portal/${portalToken}`;
+
+  useEffect(() => {
+    if (!isOpen || !portalToken) return;
+
+    // Generate high-resolution QR code encoding Customer Portal URL
     QRCode.toDataURL(
-      customer.qr_token,
+      qrTargetValue,
       {
         width: 320,
         margin: 2,
@@ -38,7 +48,7 @@ export const QrCardModal: React.FC<QrCardModalProps> = ({
         }
       }
     );
-  }, [isOpen, customer.qr_token]);
+  }, [isOpen, qrTargetValue, portalToken]);
 
   const handlePrint = () => {
     window.print();

@@ -153,11 +153,17 @@ export const ScanQR: React.FC = () => {
 
   // Handle scanned QR Code
   const handleQrScanned = async (token: string) => {
-    const cleanToken = token.trim();
+    let cleanToken = token.trim();
     if (!cleanToken) {
       showToast('Invalid QR code scanned.', 'error');
       isProcessingRef.current = false;
       return;
+    }
+
+    // If customer portal URL or path was scanned by milkman camera, extract token
+    const portalUrlMatch = cleanToken.match(/\/customer\/portal\/([a-zA-Z0-9_-]+)/);
+    if (portalUrlMatch && portalUrlMatch[1]) {
+      cleanToken = portalUrlMatch[1];
     }
 
     try {

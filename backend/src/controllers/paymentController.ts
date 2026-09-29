@@ -1,7 +1,11 @@
 import { Response } from 'express';
 import { AuthRequest } from '../types';
 import { CustomerPayment } from '../models/CustomerPayment';
-import { recordCustomerPayment, deleteCustomerPayment } from '../services/paymentService';
+import {
+  recordCustomerPayment,
+  deleteCustomerPayment,
+  updateCustomerPayment,
+} from '../services/paymentService';
 import { AppError } from '../middleware/errorHandler';
 import { Types } from 'mongoose';
 
@@ -73,5 +77,22 @@ export const deletePaymentHandler = async (req: AuthRequest, res: Response): Pro
   res.json({
     success: true,
     message: 'Payment deleted and ledger updated successfully.',
+  });
+};
+
+export const updatePaymentHandler = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.user) throw new AppError('Unauthorized', 401);
+
+  const updated = await updateCustomerPayment(
+    req.user.business_id,
+    req.user.id,
+    String(req.params.id),
+    req.body
+  );
+
+  res.json({
+    success: true,
+    data: updated,
+    message: 'Payment updated and ledger reconciled successfully.',
   });
 };

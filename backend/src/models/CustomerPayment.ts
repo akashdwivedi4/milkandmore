@@ -9,6 +9,7 @@ export interface ICustomerPayment extends Document {
   paymentDate: string; // YYYY-MM-DD
   amount: number;
   paymentMode: PaymentMode;
+  paymentType: 'PAYMENT' | 'REFUND';
   referenceNumber?: string;
   notes?: string;
   idempotencyKey?: string;
@@ -24,6 +25,7 @@ const CustomerPaymentSchema = new Schema<ICustomerPayment>(
     paymentDate: { type: String, required: true, index: true },
     amount: { type: Number, required: true, min: 0.01 },
     paymentMode: { type: String, enum: ['CASH', 'UPI', 'BANK', 'OTHER'], default: 'CASH', required: true },
+    paymentType: { type: String, enum: ['PAYMENT', 'REFUND'], default: 'PAYMENT' },
     referenceNumber: { type: String, trim: true },
     notes: { type: String, trim: true, default: '' },
     idempotencyKey: { type: String, trim: true },

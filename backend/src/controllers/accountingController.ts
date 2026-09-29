@@ -78,6 +78,20 @@ export const getDayBook = async (req: AuthRequest, res: Response): Promise<void>
   res.json({ success: true, data });
 };
 
+export const getJournalEntries = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.user) throw new AppError('Unauthorized', 401);
+  const { startDate, endDate, sourceType, limit } = req.query;
+
+  const data = await accountingService.getJournalEntries(req.user.business_id, {
+    startDate: startDate as string,
+    endDate: endDate as string,
+    sourceType: sourceType as string,
+    limit: limit ? parseInt(limit as string, 10) : undefined,
+  });
+
+  res.json({ success: true, data });
+};
+
 export const getReceivableAgeing = async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.user) throw new AppError('Unauthorized', 401);
 

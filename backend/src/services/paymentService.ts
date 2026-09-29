@@ -2,6 +2,7 @@ import { Types } from 'mongoose';
 import { CustomerPayment, ICustomerPayment, PaymentMode } from '../models/CustomerPayment';
 import { SupplierPayment, ISupplierPayment } from '../models/SupplierPayment';
 import { Customer } from '../models/Customer';
+import { Delivery } from '../models/Delivery';
 import { Supplier } from '../models/Supplier';
 import { updateAccountBalance } from './accountService';
 import { logAudit } from './auditService';
@@ -59,6 +60,7 @@ export const recordCustomerPayment = async (
           paymentDate,
           amount,
           paymentMode: mode,
+          paymentType: 'PAYMENT',
           referenceNumber: params.referenceNumber || params.reference_number || '',
           notes: params.notes || '',
           idempotencyKey: params.idempotencyKey,
@@ -75,34 +77,71 @@ export const recordCustomerPayment = async (
       await updateAccountBalance(bizId, mode, amount, session);
     }
 
-    // Double-entry accounting: Debit Cash/Bank/UPI, Credit Customer Receivables
+    // Determine prior outstanding to split between settling receivables and customer advance credit
+    const [allPriorDeliveries, allPriorPayments] = await Promise.all([
+      Delivery.find({ businessId: bizId, customerId: custId, status: 'DELIVERED' }).session(session || null),
+      CustomerPayment.find({ businessId: bizId, customerId: custId, _id: { $ne: payment._id } }).session(session || null),
+    ]);
+
+    const priorCharges = roundMoney(allPriorDeliveries.reduce((sum: number, d: any) => sum + (d.totalAmount || 0), 0));
+    const priorPaid = roundMoney(
+      allPriorPayments.reduce((sum: number, p: any) => sum + (p.paymentType === 'REFUND' ? -(p.amount || 0) : (p.amount || 0)), 0)
+    );
+    const opNet = customer.openingBalanceType === 'ADVANCE'
+      ? -roundMoney(customer.openingBalance || 0)
+      : roundMoney(customer.openingBalance || 0);
+    const priorNet = roundMoney(opNet + priorCharges - priorPaid);
+    const priorOutstanding = Math.max(0, priorNet);
+
+    const appliedToOutstanding = roundMoney(Math.min(amount, priorOutstanding));
+    const advanceCreditCreated = roundMoney(Math.max(0, amount - appliedToOutstanding));
+
     const destAccount = getPaymentAccountByMode(mode);
+    const journalLines: any[] = [
+      {
+        accountCode: destAccount.code,
+        accountName: destAccount.name,
+        accountType: 'ASSET',
+        debit: amount,
+        credit: 0,
+      },
+    ];
+
+    if (appliedToOutstanding > 0) {
+      journalLines.push({
+        accountCode: CHART_OF_ACCOUNTS.CUSTOMER_RECEIVABLES.code,
+        accountName: CHART_OF_ACCOUNTS.CUSTOMER_RECEIVABLES.name,
+        accountType: 'ASSET',
+        debit: 0,
+        credit: appliedToOutstanding,
+        partyType: 'CUSTOMER',
+        partyId: custId,
+        partyName: customer.name,
+      });
+    }
+
+    if (advanceCreditCreated > 0) {
+      journalLines.push({
+        accountCode: CHART_OF_ACCOUNTS.CUSTOMER_ADVANCES.code,
+        accountName: CHART_OF_ACCOUNTS.CUSTOMER_ADVANCES.name,
+        accountType: 'LIABILITY',
+        debit: 0,
+        credit: advanceCreditCreated,
+        partyType: 'CUSTOMER',
+        partyId: custId,
+        partyName: customer.name,
+      });
+    }
+
+    // Double-entry accounting: Debit Cash/Bank/UPI, Credit Receivables and/or Advances
     await postJournalEntry(
       {
         businessId: bizId,
         date: paymentDate,
         sourceType: 'CUSTOMER_PAYMENT',
         sourceId: payment._id,
-        narration: `Payment received from ${customer.name} via ${mode}${payment.referenceNumber ? ` (Ref: ${payment.referenceNumber})` : ''}`,
-        lines: [
-          {
-            accountCode: destAccount.code,
-            accountName: destAccount.name,
-            accountType: 'ASSET',
-            debit: amount,
-            credit: 0,
-          },
-          {
-            accountCode: CHART_OF_ACCOUNTS.CUSTOMER_RECEIVABLES.code,
-            accountName: CHART_OF_ACCOUNTS.CUSTOMER_RECEIVABLES.name,
-            accountType: 'ASSET',
-            debit: 0,
-            credit: amount,
-            partyType: 'CUSTOMER',
-            partyId: custId,
-            partyName: customer.name,
-          },
-        ],
+        narration: `Payment received from ${customer.name} via ${mode}${payment.referenceNumber ? ` (Ref: ${payment.referenceNumber})` : ''}${advanceCreditCreated > 0 ? ` [Advance: ₹${advanceCreditCreated}]` : ''}`,
+        lines: journalLines,
         userId,
       },
       session
@@ -174,6 +213,94 @@ export const deleteCustomerPayment = async (
       },
       session
     );
+  });
+};
+
+export const updateCustomerPayment = async (
+  businessId: string | Types.ObjectId,
+  userId: string | Types.ObjectId | undefined,
+  paymentId: string | Types.ObjectId,
+  updates: {
+    amount?: number;
+    paymentMode?: string;
+    payment_method?: string;
+    paymentDate?: string;
+    payment_date?: string;
+    referenceNumber?: string;
+    notes?: string;
+  }
+): Promise<ICustomerPayment> => {
+  const bizId = new Types.ObjectId(businessId);
+  const payId = new Types.ObjectId(paymentId);
+
+  return await runInTransaction(async (session) => {
+    const payment = await CustomerPayment.findOne({ _id: payId, businessId: bizId }).session(
+      session || null
+    );
+    if (!payment) {
+      throw new AppError('Payment not found.', 404);
+    }
+
+    const oldAmount = payment.amount;
+    const oldMode = payment.paymentMode;
+
+    if (updates.amount !== undefined) {
+      const newAmount = roundMoney(Number(updates.amount));
+      if (newAmount <= 0) {
+        throw new AppError('Payment amount must be greater than 0.', 400);
+      }
+      payment.amount = newAmount;
+    }
+
+    const newMode = (updates.paymentMode || updates.payment_method)
+      ? (((updates.paymentMode || updates.payment_method) as string).toUpperCase() as PaymentMode)
+      : oldMode;
+    payment.paymentMode = newMode;
+
+    if (updates.paymentDate || updates.payment_date) {
+      payment.paymentDate = updates.paymentDate || updates.payment_date!;
+    }
+    if (updates.referenceNumber !== undefined) {
+      payment.referenceNumber = updates.referenceNumber;
+    }
+    if (updates.notes !== undefined) {
+      payment.notes = updates.notes;
+    }
+
+    await payment.save({ session: session || undefined });
+
+    // Adjust account balances if mode or amount changed
+    if (oldMode === newMode) {
+      const diff = payment.amount - oldAmount;
+      if (diff !== 0 && ['CASH', 'UPI', 'BANK'].includes(newMode)) {
+        await updateAccountBalance(bizId, newMode, diff, session);
+      }
+    } else {
+      if (['CASH', 'UPI', 'BANK'].includes(oldMode)) {
+        await updateAccountBalance(bizId, oldMode, -oldAmount, session);
+      }
+      if (['CASH', 'UPI', 'BANK'].includes(newMode)) {
+        await updateAccountBalance(bizId, newMode, payment.amount, session);
+      }
+    }
+
+    await logAudit(
+      bizId,
+      userId,
+      'ADMIN',
+      'UPDATE_CUSTOMER_PAYMENT',
+      'CustomerPayment',
+      payId.toString(),
+      {
+        oldAmount,
+        newAmount: payment.amount,
+        oldMode,
+        newMode,
+      },
+      session
+    );
+
+    return payment;
   });
 };
 
@@ -348,5 +475,128 @@ export const deleteSupplierPayment = async (
       },
       session
     );
+  });
+};
+
+export const refundCustomerCredit = async (
+  businessId: string | Types.ObjectId,
+  userId: string | Types.ObjectId | undefined,
+  params: {
+    customerId: string;
+    amount: number;
+    paymentMode?: string;
+    paymentDate?: string;
+    referenceNumber?: string;
+    notes?: string;
+  }
+): Promise<ICustomerPayment> => {
+  const bizId = new Types.ObjectId(businessId);
+  const custId = new Types.ObjectId(params.customerId);
+  const amount = roundMoney(Number(params.amount));
+  const mode = ((params.paymentMode || 'CASH').toUpperCase()) as PaymentMode;
+  const paymentDate = params.paymentDate || getTodayDateString();
+
+  if (amount <= 0) {
+    throw new AppError('Refund amount must be greater than 0.', 400);
+  }
+
+  return await runInTransaction(async (session) => {
+    const customer = await Customer.findOne({ _id: custId, businessId: bizId }).session(session || null);
+    if (!customer) {
+      throw new AppError('Customer not found.', 404);
+    }
+
+    // Verify customer has enough advance credit to refund
+    const [allDeliveries, allPayments] = await Promise.all([
+      Delivery.find({ businessId: bizId, customerId: custId, status: 'DELIVERED' }).session(session || null),
+      CustomerPayment.find({ businessId: bizId, customerId: custId }).session(session || null),
+    ]);
+
+    const totalCharges = roundMoney(allDeliveries.reduce((s: number, d: any) => s + (d.totalAmount || 0), 0));
+    const totalPaid = roundMoney(
+      allPayments.reduce((s: number, p: any) => s + (p.paymentType === 'REFUND' ? -(p.amount || 0) : (p.amount || 0)), 0)
+    );
+    const opNet = customer.openingBalanceType === 'ADVANCE'
+      ? -roundMoney(customer.openingBalance || 0)
+      : roundMoney(customer.openingBalance || 0);
+    const currentNet = roundMoney(opNet + totalCharges - totalPaid);
+    const availableCredit = Math.max(0, -currentNet);
+
+    if (amount > availableCredit) {
+      throw new AppError(
+        `Cannot refund ₹${amount}. Customer only has ₹${availableCredit} in available advance credit.`,
+        400
+      );
+    }
+
+    const refundDocs = await CustomerPayment.create(
+      [
+        {
+          businessId: bizId,
+          customerId: custId,
+          paymentDate,
+          amount,
+          paymentMode: mode,
+          paymentType: 'REFUND',
+          referenceNumber: params.referenceNumber || '',
+          notes: params.notes || 'Customer credit refund',
+          recordedBy: userId ? new Types.ObjectId(userId) : undefined,
+        },
+      ],
+      { session: session || undefined }
+    );
+
+    const refund = refundDocs[0];
+
+    // Refund reduces Cash/Bank/UPI account balance
+    if (['CASH', 'UPI', 'BANK'].includes(mode)) {
+      await updateAccountBalance(bizId, mode, -amount, session);
+    }
+
+    // Double-entry accounting: Debit Customer Advances (Liability), Credit Cash/Bank/UPI (Asset)
+    const sourceAccount = getPaymentAccountByMode(mode);
+    await postJournalEntry(
+      {
+        businessId: bizId,
+        date: paymentDate,
+        sourceType: 'CUSTOMER_REFUND',
+        sourceId: refund._id,
+        narration: `Customer credit refund to ${customer.name} via ${mode}${refund.referenceNumber ? ` (Ref: ${refund.referenceNumber})` : ''}`,
+        lines: [
+          {
+            accountCode: CHART_OF_ACCOUNTS.CUSTOMER_ADVANCES.code,
+            accountName: CHART_OF_ACCOUNTS.CUSTOMER_ADVANCES.name,
+            accountType: 'LIABILITY',
+            debit: amount,
+            credit: 0,
+            partyType: 'CUSTOMER',
+            partyId: custId,
+            partyName: customer.name,
+          },
+          {
+            accountCode: sourceAccount.code,
+            accountName: sourceAccount.name,
+            accountType: 'ASSET',
+            debit: 0,
+            credit: amount,
+          },
+        ],
+        userId,
+      },
+      session
+    );
+
+    await logAudit(
+      bizId,
+      userId,
+      'ADMIN',
+      'CUSTOMER_REFUND',
+      'CustomerPayment',
+      refund._id.toString(),
+      { customerId: custId.toString(), amount, paymentMode: mode },
+      session
+    );
+
+    return refund;
   });
 };

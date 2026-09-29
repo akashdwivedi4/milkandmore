@@ -22,6 +22,7 @@ import supplierPaymentRoutes from './routes/supplierPaymentRoutes';
 import expenseRoutes from './routes/expenseRoutes';
 import exportRoutes from './routes/exportRoutes';
 import accountingRoutes from './routes/accountingRoutes';
+import customerPortalRoutes from './routes/customerPortalRoutes';
 
 export const createApp = (): Express => {
   const app = express();
@@ -74,6 +75,7 @@ export const createApp = (): Express => {
   app.use('/api/settings', settingsRoutes);
   app.use('/api/exports', exportRoutes);
   app.use('/api/accounting', accountingRoutes);
+  app.use('/api/customer-portal', customerPortalRoutes);
 
   // Central error handling
   app.use(errorHandler);

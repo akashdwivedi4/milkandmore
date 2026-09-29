@@ -9,5 +9,6 @@ const router = Router();
 router.use(authMiddleware);
 
 router.get('/statement', requireAnyStaff, asyncHandler(getCustomerStatement));
+router.get('/statement/:id', requireAnyStaff, asyncHandler(getCustomerStatement));
 
 export default router;

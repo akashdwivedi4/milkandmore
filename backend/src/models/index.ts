@@ -14,3 +14,4 @@ export * from './Expense';
 export * from './FinancialAccount';
 export * from './AuditLog';
 export * from './JournalEntry';
+export * from './PurchaseReturn';

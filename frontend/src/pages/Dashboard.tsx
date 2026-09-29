@@ -21,6 +21,7 @@ import {
   AlertTriangle,
   Scale,
   FileSpreadsheet,
+  Calculator,
 } from 'lucide-react';
 import { AddCustomerModal } from '../components/AddCustomerModal';
 
@@ -53,35 +54,44 @@ export const Dashboard: React.FC = () => {
   }, []);
 
   return (
-    <div className="space-y-6">
-      {/* Top Banner / Quick Welcome */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-sky-600 via-sky-500 to-indigo-600 p-5 sm:p-6 rounded-3xl text-white shadow-xl shadow-sky-600/15">
+    <div className="space-y-5">
+      {/* Top Banner / iRujul Dairy Command Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-[#6B1724] via-[#52121b] to-[#2E7D32] p-4 sm:p-5 rounded-2xl text-white shadow-lg shadow-maroon-950/20">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider bg-white/20 px-2.5 py-0.5 rounded-full backdrop-blur-xs">
-              Today's Live Operations
+            <span className="text-[10px] font-bold uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded backdrop-blur-xs">
+              Live Dairy Operations
             </span>
-            <span className="text-xs text-sky-100 flex items-center gap-1 font-medium">
-              <Calendar className="w-3.5 h-3.5" />
+            <span className="text-xs text-maroon-100 flex items-center gap-1 font-medium">
+              <Calendar className="w-3.5 h-3.5 text-amber-200" />
               {formatDate(new Date().toISOString())}
             </span>
           </div>
-          <h2 className="text-xl sm:text-2xl font-black tracking-tight mt-1">
+          <h2 className="text-xl sm:text-2xl font-black tracking-tight mt-0.5">
             Milk & More Management Hub
           </h2>
-          <p className="text-xs sm:text-sm text-sky-100 max-w-lg">
-            Doorstep dairy delivery, multi-business accounting, inventory control, and customer ledgers.
+          <p className="text-xs text-maroon-100/90 max-w-lg">
+            Daily door-to-door milk drops, customer account ledgers, instant collection receipts, and live inventory.
           </p>
         </div>
 
-        {/* Primary Scan CTA */}
-        <button
-          onClick={() => navigate('/scan')}
-          className="flex items-center justify-center gap-2.5 px-6 py-3.5 bg-white hover:bg-slate-50 text-sky-700 font-extrabold text-sm rounded-2xl shadow-lg shadow-black/10 active:scale-95 transition-all shrink-0 cursor-pointer"
-        >
-          <QrCode className="w-5 h-5 text-sky-600" />
-          <span>Scan Customer QR</span>
-        </button>
+        {/* Primary CTAs: Scan & Customer Accounts */}
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => navigate('/accounts')}
+            className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-900 font-extrabold text-xs rounded-xl shadow-md active:scale-95 transition-all cursor-pointer"
+          >
+            <Calculator className="w-4 h-4 text-slate-900" />
+            <span>Customer Accounts</span>
+          </button>
+          <button
+            onClick={() => navigate('/scan')}
+            className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-white hover:bg-slate-100 text-[#6B1724] font-extrabold text-xs rounded-xl shadow-md active:scale-95 transition-all cursor-pointer"
+          >
+            <QrCode className="w-4 h-4 text-[#6B1724]" />
+            <span>Scan QR</span>
+          </button>
+        </div>
       </div>
 
       {/* Low stock notification */}
@@ -279,57 +289,57 @@ export const Dashboard: React.FC = () => {
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
           <button
-            onClick={() => navigate('/scan')}
-            className="p-3 bg-white hover:bg-slate-50 border border-slate-200 rounded-2xl text-left transition-all shadow-xs"
+            onClick={() => navigate('/accounts')}
+            className="p-3 bg-white hover:bg-amber-50/50 border border-amber-200/80 rounded-xl text-left transition-all shadow-xs"
           >
-            <QrCode className="w-5 h-5 text-sky-500 mb-1" />
-            <span className="text-xs font-bold text-slate-900 block">Scan Door QR</span>
-            <span className="text-[10px] text-slate-400">Deliver Milk</span>
+            <Calculator className="w-5 h-5 text-amber-600 mb-1" />
+            <span className="text-xs font-bold text-slate-900 block">Customer Accounts</span>
+            <span className="text-[10px] text-slate-400">Statement & Dues</span>
+          </button>
+
+          <button
+            onClick={() => navigate('/today')}
+            className="p-3 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-left transition-all shadow-xs"
+          >
+            <Clock className="w-5 h-5 text-emerald-600 mb-1" />
+            <span className="text-xs font-bold text-slate-900 block">Daily Delivery</span>
+            <span className="text-[10px] text-slate-400">Route & Drops</span>
+          </button>
+
+          <button
+            onClick={() => navigate('/payments')}
+            className="p-3 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-left transition-all shadow-xs"
+          >
+            <Receipt className="w-5 h-5 text-sky-600 mb-1" />
+            <span className="text-xs font-bold text-slate-900 block">Payments</span>
+            <span className="text-[10px] text-slate-400">Log Cash / UPI</span>
           </button>
 
           <button
             onClick={() => setIsAddCustomerOpen(true)}
-            className="p-3 bg-white hover:bg-slate-50 border border-slate-200 rounded-2xl text-left transition-all shadow-xs"
+            className="p-3 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-left transition-all shadow-xs"
           >
-            <UserPlus className="w-5 h-5 text-indigo-500 mb-1" />
+            <UserPlus className="w-5 h-5 text-[#6B1724] mb-1" />
             <span className="text-xs font-bold text-slate-900 block">Add Customer</span>
             <span className="text-[10px] text-slate-400">New Subscriber</span>
           </button>
 
           <button
-            onClick={() => navigate('/purchases')}
-            className="p-3 bg-white hover:bg-slate-50 border border-slate-200 rounded-2xl text-left transition-all shadow-xs"
+            onClick={() => navigate('/scan')}
+            className="p-3 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-left transition-all shadow-xs"
           >
-            <Truck className="w-5 h-5 text-emerald-500 mb-1" />
-            <span className="text-xs font-bold text-slate-900 block">Purchases</span>
-            <span className="text-[10px] text-slate-400">Stock IN</span>
-          </button>
-
-          <button
-            onClick={() => navigate('/suppliers')}
-            className="p-3 bg-white hover:bg-slate-50 border border-slate-200 rounded-2xl text-left transition-all shadow-xs"
-          >
-            <Users className="w-5 h-5 text-amber-500 mb-1" />
-            <span className="text-xs font-bold text-slate-900 block">Suppliers</span>
-            <span className="text-[10px] text-slate-400">Vendor Ledger</span>
-          </button>
-
-          <button
-            onClick={() => navigate('/expenses')}
-            className="p-3 bg-white hover:bg-slate-50 border border-slate-200 rounded-2xl text-left transition-all shadow-xs"
-          >
-            <TrendingDown className="w-5 h-5 text-rose-500 mb-1" />
-            <span className="text-xs font-bold text-slate-900 block">Expenses</span>
-            <span className="text-[10px] text-slate-400">Diesel / Salary</span>
+            <QrCode className="w-5 h-5 text-indigo-600 mb-1" />
+            <span className="text-xs font-bold text-slate-900 block">Scan Door QR</span>
+            <span className="text-[10px] text-slate-400">Quick Drop</span>
           </button>
 
           <button
             onClick={() => navigate('/financials')}
-            className="p-3 bg-white hover:bg-slate-50 border border-slate-200 rounded-2xl text-left transition-all shadow-xs"
+            className="p-3 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-left transition-all shadow-xs"
           >
-            <Scale className="w-5 h-5 text-purple-500 mb-1" />
-            <span className="text-xs font-bold text-slate-900 block">P&L & Position</span>
-            <span className="text-[10px] text-slate-400">Balance Sheet</span>
+            <Scale className="w-5 h-5 text-purple-600 mb-1" />
+            <span className="text-xs font-bold text-slate-900 block">Dairy Day Book</span>
+            <span className="text-[10px] text-slate-400">P&L & Balance</span>
           </button>
         </div>
       </div>

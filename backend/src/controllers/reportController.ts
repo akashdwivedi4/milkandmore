@@ -135,43 +135,88 @@ export const getProductReportHandler = async (req: AuthRequest, res: Response): 
 export const getCustomerReportHandler = async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.user) return;
   const bizId = new Types.ObjectId(req.user.business_id);
+  const { status, includeInactive } = req.query;
 
-  const customers = await Customer.find({ businessId: bizId, status: 'ACTIVE' }).sort({ name: 1 });
-  const deliveries = await Delivery.find({ businessId: bizId, status: 'DELIVERED' });
-  const payments = await CustomerPayment.find({ businessId: bizId });
+  const customerFilter: any = { businessId: bizId, isDeleted: { $ne: true } };
+  if (status && status !== 'ALL') {
+    customerFilter.status = String(status).toUpperCase();
+  } else if (!status && includeInactive !== 'true') {
+    customerFilter.status = 'ACTIVE';
+  }
 
-  const delMap = new Map<string, { count: number; total: number }>();
+  const customers = await Customer.find(customerFilter).sort({ name: 1 });
+  const deliveries = await Delivery.find({ businessId: bizId, status: 'DELIVERED' }).sort({ deliveryDate: -1 });
+  const payments = await CustomerPayment.find({ businessId: bizId }).sort({ paymentDate: -1 });
+
+  const delMap = new Map<string, { count: number; total: number; lastDate?: string }>();
   for (const d of deliveries) {
     const cid = d.customerId.toString();
     const curr = delMap.get(cid) || { count: 0, total: 0 };
     curr.count += 1;
     curr.total += d.totalAmount || 0;
+    if (!curr.lastDate && d.deliveryDate) {
+      curr.lastDate = d.deliveryDate;
+    }
     delMap.set(cid, curr);
   }
 
-  const payMap = new Map<string, number>();
+  const payMap = new Map<string, { total: number; lastDate?: string }>();
   for (const p of payments) {
     const cid = p.customerId.toString();
-    payMap.set(cid, (payMap.get(cid) || 0) + (p.amount || 0));
+    const curr = payMap.get(cid) || { total: 0 };
+    const amt = p.paymentType === 'REFUND' ? -(p.amount || 0) : (p.amount || 0);
+    curr.total += amt;
+    if (!curr.lastDate && p.paymentDate) {
+      curr.lastDate = p.paymentDate;
+    }
+    payMap.set(cid, curr);
   }
 
   const report = customers.map((c) => {
     const cid = c._id.toString();
     const dData = delMap.get(cid) || { count: 0, total: 0 };
-    const pTotal = payMap.get(cid) || 0;
-    const currentOutstanding = roundMoney(c.openingBalance + dData.total - pTotal);
+    const pData = payMap.get(cid) || { total: 0 };
+    
+    const isOpeningAdvance = c.openingBalanceType === 'ADVANCE';
+    const opNet = isOpeningAdvance
+      ? -roundMoney(c.openingBalance || 0)
+      : roundMoney(c.openingBalance || 0);
+    const netBalance = roundMoney(opNet + dData.total - pData.total);
+
+    const currentOutstanding = Math.max(0, netBalance);
+    const customerCredit = Math.max(0, -netBalance);
+    const accountStatus =
+      netBalance > 0 ? 'OUTSTANDING' : netBalance < 0 ? 'CUSTOMER_CREDIT' : 'SETTLED';
+
+    let lastTransaction = '—';
+    if (dData.lastDate && pData.lastDate) {
+      lastTransaction = dData.lastDate >= pData.lastDate ? dData.lastDate : pData.lastDate;
+    } else if (dData.lastDate) {
+      lastTransaction = dData.lastDate;
+    } else if (pData.lastDate) {
+      lastTransaction = pData.lastDate;
+    }
 
     return {
       id: cid,
       name: c.name,
       mobile: c.mobile,
-      locality: c.locality,
+      address: c.address || '',
+      locality: c.locality || '',
       assignedQr: c.assignedQr,
       openingBalance: c.openingBalance,
+      openingBalanceType: c.openingBalanceType || 'DUE',
       deliveryCount: dData.count,
       totalBilled: roundMoney(dData.total),
-      totalPaid: roundMoney(pTotal),
+      totalPaid: roundMoney(pData.total),
       currentOutstanding,
+      customerCredit,
+      accountStatus,
+      status: c.status || (c.serviceEndDate ? 'INACTIVE' : 'ACTIVE'),
+      active: c.status === 'ACTIVE' && !c.serviceEndDate,
+      customerSince: c.customerSince,
+      serviceEndDate: c.serviceEndDate || null,
+      lastTransaction,
     };
   });
 
