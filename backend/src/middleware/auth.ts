@@ -7,6 +7,7 @@ import { Types } from 'mongoose';
 
 export const DEV_BUSINESS_ID = '000000000000000000000001';
 export const DEV_USER_ID = '000000000000000000000002';
+const isTest = process.env.NODE_ENV === 'test';
 
 export const authMiddleware = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -16,7 +17,7 @@ export const authMiddleware = async (req: AuthRequest, res: Response, next: Next
     const devUserHeader = req.headers['x-dev-user-id'] as string | undefined;
 
     // Support dev/test tokens
-    if (authHeader === 'Bearer dev-token') {
+    if (isTest && authHeader === 'Bearer dev-token') {
       const bizId = devBizHeader && Types.ObjectId.isValid(devBizHeader) ? devBizHeader : DEV_BUSINESS_ID;
       const uId = devUserHeader && Types.ObjectId.isValid(devUserHeader) ? devUserHeader : DEV_USER_ID;
 
@@ -123,7 +124,7 @@ export const authMiddleware = async (req: AuthRequest, res: Response, next: Next
     }
 
     // In dev/test, allow role switching header for testing role gates
-    const effectiveRole = (process.env.NODE_ENV !== 'production' && devRoleHeader) ? devRoleHeader : user.role;
+    const effectiveRole = (isTest && devRoleHeader) ? devRoleHeader : user.role;
 
     req.user = {
       id: user._id.toString(),

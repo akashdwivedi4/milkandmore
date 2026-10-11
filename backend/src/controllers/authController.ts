@@ -9,8 +9,23 @@ import { logAudit } from '../services/auditService';
 import { seedDefaultBusinessData } from '../services/seedService';
 import { AppError } from '../middleware/errorHandler';
 
+const assertPassword = (pw: unknown): void => {
+  if (typeof pw !== 'string' || pw.length < 8) {
+    throw new AppError('Password must be at least 8 characters.', 400);
+  }
+};
+
 export const register = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (process.env.NODE_ENV !== 'test' && process.env.ALLOW_REGISTRATION !== 'true') {
+    throw new AppError('Registration is disabled.', 403);
+  }
+
   const { businessName, name, email, password, mobile, timezone, currency } = req.body;
+
+  if ([businessName, name, email, password].some((v) => typeof v !== 'string')) {
+    throw new AppError('Business name, user name, email, and password are required.', 400);
+  }
+  assertPassword(password);
 
   if (!businessName || !name || !email || !password) {
     throw new AppError('Business name, user name, email, and password are required.', 400);
@@ -86,6 +101,10 @@ export const register = async (req: AuthRequest, res: Response): Promise<void> =
 
 export const login = async (req: AuthRequest, res: Response): Promise<void> => {
   const { email, password } = req.body;
+
+  if (typeof email !== 'string' || typeof password !== 'string') {
+    throw new AppError('Email and password are required.', 400);
+  }
 
   if (!email || !password) {
     throw new AppError('Email and password are required.', 400);
@@ -254,6 +273,11 @@ export const completeOnboarding = async (req: AuthRequest, res: Response): Promi
 export const changePassword = async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.user) throw new AppError('Unauthorized', 401);
   const { currentPassword, newPassword } = req.body;
+
+  if (typeof currentPassword !== 'string' || typeof newPassword !== 'string') {
+    throw new AppError('Current password and new password are required.', 400);
+  }
+  assertPassword(newPassword);
 
   if (!currentPassword || !newPassword) {
     throw new AppError('Current password and new password are required.', 400);

@@ -166,6 +166,10 @@ export async function requestOtp(portalToken: string): Promise<{
     resendCooldownUntil,
   });
 
+  if (env.NODE_ENV === 'development') {
+    console.log('[DEV ONLY] Portal OTP for ' + maskPhone(customer.mobile) + ': ' + rawOtp);
+  }
+
   // In test environment only: allow test suite to inspect mock OTP via global hook
   if (process.env.NODE_ENV === 'test' || env.NODE_ENV === 'test') {
     (global as any).__LAST_TEST_OTP__ = rawOtp;

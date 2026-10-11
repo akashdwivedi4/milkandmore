@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { env } from './config/env';
 import { errorHandler } from './middleware/errorHandler';
+import { apiRateLimiter } from './middleware/rateLimiter';
 
 // Route imports
 import authRoutes from './routes/authRoutes';
@@ -26,6 +27,12 @@ import customerPortalRoutes from './routes/customerPortalRoutes';
 
 export const createApp = (): Express => {
   const app = express();
+
+  app.set('trust proxy', Number(process.env.TRUST_PROXY || 0));
+
+  if (env.NODE_ENV === 'production' && env.CORS_ORIGIN === '*') {
+    throw new Error('CORS_ORIGIN must be a specific origin in production');
+  }
 
   // Security headers & CORS
   app.use(
@@ -57,6 +64,8 @@ export const createApp = (): Express => {
       timestamp: new Date().toISOString(),
     });
   });
+
+  app.use('/api', apiRateLimiter);
 
   // API Routes
   app.use('/api/auth', authRoutes);

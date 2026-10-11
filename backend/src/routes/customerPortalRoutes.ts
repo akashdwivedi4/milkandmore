@@ -12,13 +12,14 @@ import {
 } from '../controllers/customerPortalController';
 import { customerAuthMiddleware } from '../middleware/customerAuth';
 import { asyncHandler } from '../utils/asyncHandler';
+import { portalOtpRateLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 
 // Public routes (before verification)
 router.get('/verify-info/:token', asyncHandler(getVerifyInfo));
-router.post('/request-otp', asyncHandler(requestOtp));
-router.post('/verify-otp', asyncHandler(verifyOtp));
+router.post('/request-otp', portalOtpRateLimiter, asyncHandler(requestOtp));
+router.post('/verify-otp', portalOtpRateLimiter, asyncHandler(verifyOtp));
 
 // Protected routes (strictly isolated to the verified customer session)
 router.use(asyncHandler(customerAuthMiddleware as any));
